@@ -12,7 +12,16 @@
           "package_name": "com.altomedia.beruang"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "739146490998-beruang-release-oauth-client.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.altomedia.beruang",
+            "certificate_hash": "2edb983a9e4fb39b3934fd0ce27d202148f22d6c"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAsMHZDFF-93Z1xJDWEpsaqyi6s2juXkLI"
