@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- bear head -->
+    <path
+        android:fillColor="#FF6EE84A"
+        android:pathData="M54,30 m-22,0 a22,22 0 1,0 44,0 a22,22 0 1,0 -44,0" />
+    <!-- left ear -->
+    <path
+        android:fillColor="#FF6EE84A"
+        android:pathData="M36,22 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+    <!-- right ear -->
+    <path
+        android:fillColor="#FF6EE84A"
+        android:pathData="M72,22 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+    <!-- muzzle -->
+    <path
+        android:fillColor="#FFFFD23F"
+        android:pathData="M54,44 m-10,0 a10,7 0 1,0 20,0 a10,7 0 1,0 -20,0" />
+    <!-- nose -->
+    <path
+        android:fillColor="#FF0B110E"
+        android:pathData="M54,38 m-3,0 a3,2.5 0 1,0 6,0 a3,2.5 0 1,0 -6,0" />
+    <!-- left eye -->
+    <path
+        android:fillColor="#FF0B110E"
+        android:pathData="M45,30 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+    <!-- right eye -->
+    <path
+        android:fillColor="#FF0B110E"
+        android:pathData="M63,30 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+</vector>

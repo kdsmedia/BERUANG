@@ -1,0 +1,95 @@
+rules_version = '2';
+// BERUANG — Firestore Security Rules (mirror of the Supabase RLS)
+// Deploy: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+
+    // ---- profiles ----
+    match /profiles/{id} {
+      allow read: if true;
+      allow create: if signedIn() && id == uid();
+      allow update: if signedIn() && id == uid();
+    }
+
+    // ---- posts ----
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      allow delete: if signedIn() && resource.data.user_id == uid();
+      // likes/comments/stories subcollections not used (separate collections)
+    }
+
+    // ---- likes ----
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      allow delete: if signedIn() && resource.data.user_id == uid();
+    }
+
+    // ---- comments ----
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      allow delete: if signedIn() && resource.data.user_id == uid();
+    }
+
+    // ---- stories ----
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      allow delete: if signedIn() && resource.data.user_id == uid();
+    }
+
+    // ---- messages (private 1:1) ----
+    match /messages/{messageId} {
+      allow read: if signedIn() && (resource.data.sender_id == uid() || resource.data.receiver_id == uid());
+      allow create: if signedIn() && request.resource.data.sender_id == uid();
+      allow update: if signedIn() && resource.data.receiver_id == uid(); // mark read
+    }
+
+    // ---- global_messages ----
+    match /global_messages/{messageId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+    }
+
+    // ---- friendships ----
+    match /friendships/{friendshipId} {
+      allow read: if signedIn() && (resource.data.user_id == uid() || resource.data.friend_id == uid());
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      // NOTE: mirrors the looser-than-ideal RLS — either party may update status.
+      allow update: if signedIn() && (resource.data.user_id == uid() || resource.data.friend_id == uid());
+      allow delete: if signedIn() && (resource.data.user_id == uid() || resource.data.friend_id == uid());
+    }
+
+    // ---- groups ----
+    match /groups/{groupId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.created_by == uid();
+    }
+
+    // ---- group_members ----
+    match /group_members/{memberId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == uid();
+      allow delete: if signedIn() && resource.data.user_id == uid();
+    }
+
+    // ---- notifications ----
+    match /notifications/{notifId} {
+      allow read: if signedIn() && resource.data.user_id == uid();
+      // NOTE: mirrors the looser-than-ideal RLS — any signed-in client may insert
+      // a notification for any user (used by the app to notify on likes/comments).
+      allow create: if signedIn();
+      allow update: if signedIn() && resource.data.user_id == uid();
+    }
+
+    // deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

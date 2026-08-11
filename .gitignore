@@ -1,0 +1,18 @@
+# Android / Gradle build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.idea/
+android/local.properties
+*.iml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+
+# Logs
+*.log
+/tmp/

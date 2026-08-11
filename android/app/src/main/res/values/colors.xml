@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="beruang_green">#FF6EE84A</color>
+    <color name="beruang_yellow">#FFFFD23F</color>
+    <color name="beruang_bg">#FF0B110E</color>
+    <color name="beruang_surface">#FF141D18</color>
+    <color name="beruang_text">#FFEAF5EE</color>
+</resources>
