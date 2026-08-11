@@ -2,18 +2,21 @@ package com.altomedia.beruang.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Green = Color(0xFF6EE84A)
-val GreenBright = Color(0xFFB6FF3C)
-val Gold = Color(0xFFFFD23F)
-val Bg = Color(0xFF0B110E)
-val Surface = Color(0xFF141D18)
-val Surface2 = Color(0xFF1C2720)
-val Surface3 = Color(0xFF243029)
-val Line = Color(0xFF2A3A30)
-val Text = Color(0xFFEAF5EE)
-val Muted = Color(0xFF93A89A)
-val Danger = Color(0xFFFF5B5B)
-val Blue = Color(0xFF56CDFF)
+// BERUANG light palette — Instagram-inspired, clean & professional.
+// Brand accents stay green/gold; base is white/light-gray like IG.
+
+val Green = Color(0xFF16A34A)        // brand green (refined, not neon)
+val GreenBright = Color(0xFF22C55E)  // brighter green for selected states
+val Gold = Color(0xFFF59E0B)         // brand gold/amber
+val Bg = Color(0xFFFAFAFA)           // app background (IG off-white)
+val Surface = Color(0xFFFFFFFF)      // card / surface
+val Surface2 = Color(0xFFF2F2F2)     // subtle gray fill (chips, input bg)
+val Surface3 = Color(0xFFE6E6E6)     // avatar placeholder bg
+val Line = Color(0xFFDBDBDB)         // IG border gray
+val Text = Color(0xFF262626)         // IG near-black text
+val Muted = Color(0xFF8E8E8E)        // IG secondary gray
+val Danger = Color(0xFFED4956)       // IG red (likes / delete)
+val Blue = Color(0xFF3897F0)         // IG link blue
 val Pink = Color(0xFFFF86C8)
-val GreenSoft = Color(0x246EE84A)
-val GoldSoft = Color(0x29FFD23F)
+val GreenSoft = Color(0x1A16A34A)    // soft green tint
+val GoldSoft = Color(0x1AF59E0B)     // soft gold tint

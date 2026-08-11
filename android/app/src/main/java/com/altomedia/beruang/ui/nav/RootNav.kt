@@ -79,7 +79,7 @@ fun RootNav() {
 
 @Composable
 private fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
-    Surface(color = Surface, tonalElevation = 0.dp) {
+    Surface(color = Surface, tonalElevation = 0.dp, shadowElevation = 8.dp) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding(),
             horizontalArrangement = Arrangement.SpaceAround
@@ -108,9 +108,9 @@ private fun NavigationIcon(tab: Tab, selected: Boolean, onNavigate: (String) -> 
     Box(contentAlignment = Alignment.TopEnd) {
         IconButton(onClick = { onNavigate(tab.route) }) {
             Icon(
-                tab.icon,
+                if (selected) tab.selectedIcon else tab.icon,
                 contentDescription = tab.label,
-                tint = if (selected) Green else Muted
+                tint = if (selected) Green else Text
             )
         }
         if (tab == Tab.Friends) {
@@ -135,7 +135,7 @@ private fun NavigationIcon(tab: Tab, selected: Boolean, onNavigate: (String) -> 
 private fun BadgeDot(count: Int) {
     if (count <= 0) return
     Box(
-        Modifier.size(16.dp).clip(CircleShape).background(Gold),
+        Modifier.size(16.dp).clip(CircleShape).background(Danger),
         contentAlignment = Alignment.Center
-    ) { Text(if (count > 99) "99+" else count.toString(), fontSize = 9.sp, color = Bg, fontWeight = FontWeight.Bold) }
+    ) { Text(if (count > 99) "99+" else count.toString(), fontSize = 9.sp, color = Surface, fontWeight = FontWeight.Bold) }
 }

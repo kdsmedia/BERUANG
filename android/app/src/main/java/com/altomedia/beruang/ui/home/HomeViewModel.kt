@@ -40,6 +40,10 @@ class HomeViewModel @Inject constructor(
     private val _comments = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
     val comments: StateFlow<Map<String, List<Comment>>> = _comments.asStateFlow()
 
+    // profiles of commenters, keyed by user id, for showing real names
+    private val _commentProfiles = MutableStateFlow<Map<String, Profile>>(emptyMap())
+    val commentProfiles: StateFlow<Map<String, Profile>> = _commentProfiles.asStateFlow()
+
     private val _expandedComments = MutableStateFlow<Set<String>>(emptySet())
     val expandedComments: StateFlow<Set<String>> = _expandedComments.asStateFlow()
 
@@ -95,6 +99,12 @@ class HomeViewModel @Inject constructor(
         try {
             val c = feed.commentsForPost(postId)
             _comments.value = _comments.value + (postId to c)
+            // fetch commenter profiles for real names
+            val ids = c.map { it.user_id }.distinct().filter { it !in _commentProfiles.value }
+            if (ids.isNotEmpty()) {
+                val fetched = ids.map { it to profiles.get(it) }
+                _commentProfiles.value = _commentProfiles.value + fetched
+            }
         } catch (e: Exception) { _toast.value = "Comments failed" }
     }
 

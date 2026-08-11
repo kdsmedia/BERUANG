@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,49 +55,72 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(s.toast) { s.toast?.let { snackbar.showSnackbar(it); vm.toastShown() } }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { p ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = Bg,
+        topBar = {
+            Surface(color = Surface) {
+                Row(
+                    Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Profile", color = Text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+                HorizontalDivider(color = Line, thickness = 0.5.dp)
+            }
+        }
+    ) { p ->
         LazyColumn(Modifier.fillMaxSize().padding(p)) {
             item {
                 val prof = s.profile
-                Box {
-                    Box(Modifier.fillMaxWidth().height(150.dp)
-                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Bg, Green, Gold))))
-                    Column(Modifier.padding(16.dp).offset(y = 44.dp)) {
-                        Box(Modifier.size(92.dp).clip(CircleShape).background(Surface3)) {
+                Column(Modifier.fillMaxWidth().background(Surface).padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(88.dp).clip(CircleShape).background(Surface3)) {
                             val avatarModel = profileAvatarModel(prof)
                             avatarModel?.let {
                                 AsyncImage(model = it, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(prof?.displayName ?: "User", color = Text, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                            Text(" ✔", color = Green, fontSize = 14.sp)
+                        Spacer(Modifier.width(16.dp))
+                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceAround) {
+                            Stat(s.posts.size.toString(), "Posts")
+                            Stat(s.friendProfiles.size.toString(), "Friends")
                         }
-                        Text(prof?.bio ?: "", color = Muted, fontSize = 14.sp)
-                        Spacer(Modifier.height(10.dp))
-                        if (targetUid == myUid) {
-                            Row {
-                                Button(onClick = { showEdit = true }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Bg)) { Text("Edit Profile") }
-                                Spacer(Modifier.width(8.dp))
-                                OutlinedButton(onClick = { com.google.firebase.auth.FirebaseAuth.getInstance().signOut() }) { Text("Log out", color = Text) }
-                            }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(prof?.displayName ?: "User", color = Text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Filled.Verified, contentDescription = "verified", tint = Green, modifier = Modifier.size(15.dp))
+                    }
+                    Text(prof?.bio ?: "", color = Text, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                    Spacer(Modifier.height(12.dp))
+                    if (targetUid == myUid) {
+                        Row(Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = { showEdit = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Edit Profile", fontWeight = FontWeight.SemiBold) }
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { com.google.firebase.auth.FirebaseAuth.getInstance().signOut() },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Text),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Line),
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Log out") }
                         }
                     }
                 }
+                HorizontalDivider(color = Line, thickness = 6.dp)
             }
             item {
-                Row(Modifier.fillMaxWidth().padding(14.dp)) {
-                    Stat(s.posts.size.toString(), "Posts", Modifier.weight(1f))
-                    Spacer(Modifier.width(10.dp))
-                    Stat(s.friendProfiles.size.toString(), "Friends", Modifier.weight(1f))
-                }
-            }
-            item {
-                TabRow(selectedTabIndex = listOf("posts","about","friends").indexOf(tab), containerColor = Surface, contentColor = GreenBright) {
-                    Tab(selected = tab == "posts", onClick = { tab = "posts" }) { Text("Posts", Modifier.padding(10.dp)) }
-                    Tab(selected = tab == "about", onClick = { tab = "about" }) { Text("About", Modifier.padding(10.dp)) }
-                    Tab(selected = tab == "friends", onClick = { tab = "friends" }) { Text("Friends", Modifier.padding(10.dp)) }
+                TabRow(selectedTabIndex = listOf("posts","about","friends").indexOf(tab), containerColor = Surface, contentColor = Green) {
+                    Tab(selected = tab == "posts", onClick = { tab = "posts" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("Posts", Modifier.padding(10.dp)) }
+                    Tab(selected = tab == "about", onClick = { tab = "about" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("About", Modifier.padding(10.dp)) }
+                    Tab(selected = tab == "friends", onClick = { tab = "friends" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("Friends", Modifier.padding(10.dp)) }
                 }
             }
             when (tab) {
@@ -136,12 +161,10 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun Stat(n: String, label: String, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(12.dp), color = Surface, border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(n, color = Text, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text(label, color = Muted, fontSize = 12.sp)
-        }
+private fun Stat(n: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(n, color = Text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(label, color = Muted, fontSize = 12.sp)
     }
 }
 
@@ -163,16 +186,16 @@ private fun EditProfileDialog(prof: Profile?, onDismiss: () -> Unit, onSave: (St
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { avatarUri = it }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { Button(onClick = { onSave(name, bio, avatarUri) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Bg)) { Text("Save") } },
+        confirmButton = { Button(onClick = { onSave(name, bio, avatarUri) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White), shape = RoundedCornerShape(8.dp)) { Text("Save", fontWeight = FontWeight.SemiBold) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Muted) } },
-        title = { Text("Edit Profile", color = Text) },
+        title = { Text("Edit Profile", color = Text, fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Box(Modifier.size(96.dp).clip(CircleShape).background(Surface3), contentAlignment = Alignment.Center) {
                     val url = avatarUri?.toString() ?: prof?.avatarOrDefault
                     if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                 }
-                TextButton(onClick = { picker.launch("image/*") }) { Text("Change avatar", color = GreenBright) }
+                TextButton(onClick = { picker.launch("image/*") }) { Text("Change avatar", color = Green, fontWeight = FontWeight.SemiBold) }
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") }, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))

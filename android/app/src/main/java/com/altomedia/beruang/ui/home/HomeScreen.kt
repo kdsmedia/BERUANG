@@ -2,6 +2,7 @@ package com.altomedia.beruang.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Mood
 import androidx.compose.material.icons.outlined.SentimentSatisfied
 import androidx.compose.material3.*
@@ -26,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.ui.components.EmojiPickerSheet
 import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.FeelingPickerSheet
+import com.altomedia.beruang.ui.components.clickableNoRipple
 import com.altomedia.beruang.ui.components.outlinedFieldColors
 import com.altomedia.beruang.ui.feed.PostCard
 import com.altomedia.beruang.ui.theme.*
@@ -37,6 +40,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
     val loading by vm.loading.collectAsStateWithLifecycle()
     val toast by vm.toast.collectAsStateWithLifecycle()
     val comments by vm.comments.collectAsStateWithLifecycle()
+    val commentProfiles by vm.commentProfiles.collectAsStateWithLifecycle()
     val expanded by vm.expandedComments.collectAsStateWithLifecycle()
 
     var composerText by remember { mutableStateOf("") }
@@ -49,7 +53,11 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(toast) { toast?.let { snackbarHost.showSnackbar(it); vm.toastShown() } }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }) { p ->
+    Scaffold(
+        topBar = { HomeTopBar() },
+        snackbarHost = { SnackbarHost(snackbarHost) },
+        containerColor = Bg
+    ) { p ->
         LazyColumn(Modifier.fillMaxSize().padding(p)) {
             // Composer
             item {
@@ -88,6 +96,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
                     PostCard(
                         item = item,
                         comments = comments[item.post.id],
+                        commentProfiles = commentProfiles,
                         commentsExpanded = item.post.id in expanded,
                         onLike = { vm.toggleLike(item) },
                         onToggleComments = { vm.toggleComments(item.post.id) },
@@ -105,6 +114,28 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
 }
 
 @Composable
+private fun HomeTopBar() {
+    Surface(color = Surface, shadowElevation = 0.dp) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row {
+                    Text("BERU", color = Green, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text("ANG", color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.Filled.Favorite, contentDescription = "activity", tint = Text, modifier = Modifier.size(26.dp).clickableNoRipple { })
+                Spacer(Modifier.width(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "messages", tint = Text, modifier = Modifier.size(26.dp).clickableNoRipple { })
+            }
+            HorizontalDivider(color = Line, thickness = 0.5.dp)
+        }
+    }
+}
+
+@Composable
 private fun Composer(
     text: String, onText: (String) -> Unit,
     feeling: Feeling?,
@@ -112,59 +143,62 @@ private fun Composer(
     onClearFeeling: () -> Unit,
     onPost: () -> Unit
 ) {
-    Surface(Modifier.fillMaxWidth().padding(8.dp), shape = RoundedCornerShape(16.dp), color = Surface, border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
-        Column(Modifier.padding(14.dp)) {
-            OutlinedTextField(
-                value = text, onValueChange = onText,
-                placeholder = { Text("What's on your mind?") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = outlinedFieldColors(),
-                shape = RoundedCornerShape(12.dp)
-            )
-            if (feeling != null) {
-                Row(Modifier.padding(top = 8.dp)) {
-                    Tag("${feeling.emoji} is feeling ${feeling.label}", GoldSoft, Gold, onClearFeeling)
-                }
+    Column(Modifier.fillMaxWidth().background(Surface).padding(14.dp)) {
+        OutlinedTextField(
+            value = text, onValueChange = onText,
+            placeholder = { Text("What's on your mind?") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = outlinedFieldColors(),
+            shape = RoundedCornerShape(12.dp)
+        )
+        if (feeling != null) {
+            Row(Modifier.padding(top = 8.dp)) {
+                Tag("${feeling.emoji} is feeling ${feeling.label}", GoldSoft, Gold, onClearFeeling)
             }
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row {
-                    ComposerChip("Feeling", Icons.Outlined.Mood, Gold, onFeeling)
-                    ComposerChip("Emoji", Icons.Outlined.SentimentSatisfied, GreenBright, onEmoji)
-                }
-                // Send (post) icon button
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(Green),
-                    contentAlignment = Alignment.Center
-                ) {
-                    IconButton(onClick = onPost, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Post", tint = Bg, modifier = Modifier.size(20.dp))
-                    }
-                }
+        }
+        HorizontalDivider(color = Line, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row {
+                ComposerChip("Feeling", Icons.Outlined.Mood, Gold, onFeeling)
+                Spacer(Modifier.width(8.dp))
+                ComposerChip("Emoji", Icons.Outlined.SentimentSatisfied, GreenBright, onEmoji)
+            }
+            Button(
+                onClick = onPost,
+                colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "post", modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Post", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
         }
     }
+    HorizontalDivider(color = Line, thickness = 6.dp)
 }
 
 @Composable
 private fun ComposerChip(label: String, icon: ImageVector, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(Surface2).clickable { onClick() }.padding(8.dp, 7.dp),
+        Modifier.clip(RoundedCornerShape(50)).background(Surface2).clickable { onClick() }.padding(horizontal = 10.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = Text, fontSize = 12.sp)
+        Text(label, color = Text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun Tag(text: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, onClear: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(bg).padding(6.dp, 5.dp),
+        Modifier.clip(RoundedCornerShape(50)).background(bg).padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text, color = fg, fontSize = 12.sp)
-        Text("  ✕", color = fg, fontSize = 12.sp, modifier = Modifier.clickable { onClear() })
+        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(6.dp))
+        Text("✕", color = fg, fontSize = 12.sp, modifier = Modifier.clickable { onClear() })
     }
 }
 
@@ -173,8 +207,8 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.clip(RoundedCornerShape(50))
             .background(if (selected) GreenSoft else Surface2)
-            .clickable { onClick() }.padding(8.dp, 7.dp)
+            .clickable { onClick() }.padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Text(label, color = if (selected) GreenBright else Muted, fontSize = 13.sp)
+        Text(label, color = if (selected) Green else Muted, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
 }

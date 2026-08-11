@@ -1,16 +1,15 @@
 package com.altomedia.beruang.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val colors = darkColorScheme(
-    primary = GreenBright,
-    onPrimary = Bg,
+private val colors = lightColorScheme(
+    primary = Green,
+    onPrimary = Surface,
     secondary = Gold,
-    onSecondary = Bg,
-    tertiary = Green,
+    onSecondary = Text,
+    tertiary = GreenBright,
     background = Bg,
     onBackground = Text,
     surface = Surface,

@@ -1,5 +1,6 @@
 package com.altomedia.beruang.ui.messages
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,7 +8,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.ui.components.Avatar
-import com.altomedia.beruang.ui.components.EmojiPickerSheet
-import com.altomedia.beruang.ui.components.outlinedFieldColors
+import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.relTime
 import com.altomedia.beruang.ui.theme.*
 
@@ -33,42 +32,44 @@ fun ChatScreen(partnerUid: String, onBack: () -> Unit, vm: MessagesViewModel = h
     var showEmoji by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back", tint = Text) }
-            Avatar(partner, 36.dp)
-            Spacer(Modifier.width(10.dp))
-            Text(partner?.displayName ?: "User", color = Text, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showEmoji = true }) { Text("😀", fontSize = 22.sp) }
+    Scaffold(
+        containerColor = Bg,
+        topBar = {
+            Surface(color = Surface) {
+                Row(
+                    Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back", tint = Text) }
+                    Avatar(partner, 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(partner?.displayName ?: "User", color = Text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
+                HorizontalDivider(color = Line, thickness = 0.5.dp)
+            }
         }
-        HorizontalDivider(color = Line)
-        LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-            if (thread.isEmpty()) item { Text("Say hello 👋", color = Muted, modifier = Modifier.padding(16.dp)) }
-            items(thread) { m ->
-                val mine = m.sender_id == myUid
-                Row(Modifier.fillMaxWidth().padding(8.dp, 4.dp), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-                    Surface(color = if (mine) Green else Surface2, shape = RoundedCornerShape(14.dp)) {
-                        Column(Modifier.padding(10.dp, 6.dp)) {
-                            Text(m.content, color = if (mine) Bg else Text, fontSize = 14.sp)
-                            Text(relTime(m.created_at), color = if (mine) Bg else Muted, fontSize = 10.sp)
+    ) { p ->
+        Column(Modifier.fillMaxSize().padding(p)) {
+            if (thread.isEmpty()) {
+                EmptyState("👋", "Say hello to start the conversation.")
+            } else {
+                LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                    items(thread) { m ->
+                        val mine = m.sender_id == myUid
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+                            Surface(color = if (mine) Green else Surface2, shape = RoundedCornerShape(16.dp)) {
+                                Column(Modifier.padding(12.dp, 7.dp)) {
+                                    Text(m.content, color = if (mine) androidx.compose.ui.graphics.Color.White else Text, fontSize = 14.sp)
+                                    Text(relTime(m.created_at), color = if (mine) androidx.compose.ui.graphics.Color.White.copy(alpha = .7f) else Muted, fontSize = 10.sp)
+                                }
+                            }
                         }
                     }
                 }
+                LaunchedEffect(thread.size) { if (thread.isNotEmpty()) listState.animateScrollToItem(thread.size - 1) }
             }
-        }
-        LaunchedEffect(thread.size) { if (thread.isNotEmpty()) listState.animateScrollToItem(thread.size - 1) }
-        Row(Modifier.padding(10.dp).navigationBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = text, onValueChange = { text = it },
-                placeholder = { Text("Message…") },
-                modifier = Modifier.weight(1f), singleLine = true,
-                colors = outlinedFieldColors(), shape = RoundedCornerShape(50)
-            )
-            IconButton(onClick = { if (text.isNotBlank()) { vm.send(partnerUid, text); text = "" } }) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "send", tint = Green)
-            }
+            com.altomedia.beruang.ui.messages.InputBar(text, onText = { text = it }, onEmoji = { showEmoji = true }, onSend = { if (text.isNotBlank()) { vm.send(partnerUid, text); text = "" } })
         }
     }
-    if (showEmoji) EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })
+    if (showEmoji) com.altomedia.beruang.ui.components.EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })
 }
