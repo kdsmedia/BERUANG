@@ -1,13 +1,10 @@
 package com.altomedia.beruang.ui.home
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.altomedia.beruang.data.model.Comment
-import com.altomedia.beruang.data.model.Like
 import com.altomedia.beruang.data.model.Post
 import com.altomedia.beruang.data.model.Profile
-import com.altomedia.beruang.data.model.Story
 import com.altomedia.beruang.data.repo.FeedRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,9 +30,6 @@ class HomeViewModel @Inject constructor(
     private val _items = MutableStateFlow<List<FeedItem>>(emptyList())
     val items: StateFlow<List<FeedItem>> = _items.asStateFlow()
 
-    private val _stories = MutableStateFlow<List<Pair<Story, Profile>>>(emptyList())
-    val stories: StateFlow<List<Pair<Story, Profile>>> = _stories.asStateFlow()
-
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
@@ -55,13 +49,7 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() = viewModelScope.launch {
         _loading.value = true
-        try { loadStories(); loadFeed() } finally { _loading.value = false }
-    }
-
-    private suspend fun loadStories() {
-        val s = feed.recentStories()
-        val withProfiles = s.map { it to profiles.get(it.user_id) }
-        _stories.value = withProfiles
+        try { loadFeed() } finally { _loading.value = false }
     }
 
     private suspend fun loadFeed() {
@@ -76,9 +64,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun createPost(content: String, image: Uri?, video: Uri?, location: String?) = viewModelScope.launch {
+    fun createPost(content: String) = viewModelScope.launch {
         try {
-            feed.createPost(content, image, video, location)
+            feed.createPost(content)
             _toast.value = "Posted"
             refresh()
         } catch (e: Exception) { _toast.value = "Post failed: ${e.message}" }
@@ -131,10 +119,5 @@ class HomeViewModel @Inject constructor(
             _items.value = _items.value.filterNot { it.post.id == post.id }
             _toast.value = "Post deleted"
         } catch (e: Exception) { _toast.value = e.message ?: "Delete failed" }
-    }
-
-    fun addStory(uri: Uri) = viewModelScope.launch {
-        try { feed.addStory(uri); _toast.value = "Story added"; loadStories() }
-        catch (e: Exception) { _toast.value = "Story failed" }
     }
 }

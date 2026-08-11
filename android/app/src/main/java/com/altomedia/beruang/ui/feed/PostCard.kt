@@ -69,11 +69,6 @@ fun PostCard(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(relTime(post.created_at), color = Muted, fontSize = 12.sp)
-                        post.location?.let {
-                            Text(" · ", color = Muted, fontSize = 12.sp)
-                            Icon(Icons.Filled.LocationOn, contentDescription = null, tint = Blue, modifier = Modifier.size(12.dp))
-                            Text(it, color = Blue, fontSize = 12.sp)
-                        }
                     }
                 }
                 IconButton(onClick = { menuOpen = true }) {

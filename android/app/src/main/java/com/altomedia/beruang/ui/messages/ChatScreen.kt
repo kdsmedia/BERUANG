@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,7 +65,9 @@ fun ChatScreen(partnerUid: String, onBack: () -> Unit, vm: MessagesViewModel = h
                 modifier = Modifier.weight(1f), singleLine = true,
                 colors = outlinedFieldColors(), shape = RoundedCornerShape(50)
             )
-            IconButton(onClick = { vm.send(partnerUid, text); text = "" }) { Text("➤", color = Green, fontSize = 20.sp) }
+            IconButton(onClick = { if (text.isNotBlank()) { vm.send(partnerUid, text); text = "" } }) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "send", tint = Green)
+            }
         }
     }
     if (showEmoji) EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })

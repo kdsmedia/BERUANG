@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.ui.components.Avatar
+import com.altomedia.beruang.ui.components.EmojiPickerSheet
 import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.outlinedFieldColors
 import com.altomedia.beruang.ui.components.relTime
@@ -78,6 +81,7 @@ private fun GlobalTab(vm: MessagesViewModel) {
     val profs by vm.globalProfiles.collectAsStateWithLifecycle()
     val myUid = androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.profile.SessionViewModel>().uid.collectAsStateWithLifecycle().value
     var text by remember { mutableStateOf("") }
+    var showEmoji by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     Column(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
@@ -104,9 +108,13 @@ private fun GlobalTab(vm: MessagesViewModel) {
                 modifier = Modifier.weight(1f), singleLine = true,
                 colors = outlinedFieldColors(), shape = RoundedCornerShape(50)
             )
-            IconButton(onClick = { vm.sendGlobal(text); text = "" }) { Text("➤", color = Green, fontSize = 20.sp) }
+            IconButton(onClick = { showEmoji = true }) { Text("😀", fontSize = 22.sp) }
+            IconButton(onClick = { if (text.isNotBlank()) { vm.sendGlobal(text); text = "" } }) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "send", tint = Green)
+            }
         }
     }
+    if (showEmoji) EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })
 }
 
 @Composable

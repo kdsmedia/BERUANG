@@ -80,7 +80,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
+    // Note: firebase-storage removed — media now stored in device local storage.
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")

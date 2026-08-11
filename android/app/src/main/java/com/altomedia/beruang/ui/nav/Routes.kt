@@ -26,8 +26,6 @@ object Routes {
     const val Profile = "profile"
     const val Chat = "chat/{uid}"
     const val ProfileView = "profileView/{uid}"
-    const val Story = "story/{url}"
     fun chat(uid: String) = "chat/$uid"
     fun profileView(uid: String) = "profileView/$uid"
-    fun story(url: String) = "story/${java.net.URLEncoder.encode(url, "UTF-8")}"
 }

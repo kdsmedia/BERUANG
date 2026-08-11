@@ -3,13 +3,12 @@ package com.altomedia.beruang.ui.profile
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.altomedia.beruang.data.model.Group
 import com.altomedia.beruang.data.model.Post
 import com.altomedia.beruang.data.model.Profile
 import com.altomedia.beruang.data.repo.FeedRepository
 import com.altomedia.beruang.data.repo.FriendsRepository
+import com.altomedia.beruang.data.repo.LocalStorageRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
-import com.altomedia.beruang.data.repo.StorageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +30,7 @@ class ProfileViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val feed: FeedRepository,
     private val friends: FriendsRepository,
-    private val storage: StorageRepository
+    private val storage: LocalStorageRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProfileUiState())
     val state: StateFlow<ProfileUiState> = _state
@@ -52,7 +51,7 @@ class ProfileViewModel @Inject constructor(
     fun updateProfile(name: String, bio: String, avatarUri: Uri?) = viewModelScope.launch {
         try {
             var url: String? = null
-            if (avatarUri != null) url = storage.uploadAvatar(avatarUri)
+            if (avatarUri != null) url = storage.saveAvatar(avatarUri)
             profiles.update(name, bio, url)
             _state.value = _state.value.copy(toast = "Profile updated")
             loadedUid?.let { load(it) }

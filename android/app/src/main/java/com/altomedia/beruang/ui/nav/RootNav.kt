@@ -20,7 +20,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.altomedia.beruang.ui.home.HomeScreen
-import com.altomedia.beruang.ui.feed.StoryViewer
 import com.altomedia.beruang.ui.friends.FriendsScreen
 import com.altomedia.beruang.ui.groups.GroupsScreen
 import com.altomedia.beruang.ui.messages.MessagesScreen
@@ -52,7 +51,7 @@ fun RootNav() {
     ) { padding ->
         Box(Modifier.padding(padding)) {
             NavHost(nav, startDestination = Routes.Home) {
-                composable(Routes.Home) { HomeScreen(openStory = { url -> nav.navigate(Routes.story(url)) }) }
+                composable(Routes.Home) { HomeScreen() }
                 composable(Routes.Friends) { FriendsScreen(openChat = { uid -> nav.navigate(Routes.chat(uid)) }, openProfile = { uid -> nav.navigate(Routes.profileView(uid)) }) }
                 composable(Routes.Messages) { MessagesScreen(openChat = { uid -> nav.navigate(Routes.chat(uid)) }) }
                 composable(Routes.Groups) { GroupsScreen() }
@@ -72,13 +71,6 @@ fun RootNav() {
                     arguments = listOf(navArgument("uid") { type = NavType.StringType })
                 ) { entry ->
                     ProfileScreen(uid = entry.arguments?.getString("uid"))
-                }
-                composable(
-                    "${Routes.Story}",
-                    arguments = listOf(navArgument("url") { type = NavType.StringType })
-                ) { entry ->
-                    val url = java.net.URLDecoder.decode(entry.arguments?.getString("url") ?: "", "UTF-8")
-                    StoryViewer(url, onClose = { nav.popBackStack() })
                 }
             }
         }

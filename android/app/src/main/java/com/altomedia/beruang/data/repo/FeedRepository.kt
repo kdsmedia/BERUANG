@@ -1,30 +1,24 @@
 package com.altomedia.beruang.data.repo
 
-import android.net.Uri
 import com.altomedia.beruang.data.model.Comment
 import com.altomedia.beruang.data.model.Like
 import com.altomedia.beruang.data.model.Notification
 import com.altomedia.beruang.data.model.Post
-import com.altomedia.beruang.data.model.Story
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class FeedRepository @Inject constructor(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth,
-    private val storage: FirebaseStorage
+    private val auth: FirebaseAuth
 ) {
     private val posts = db.collection("posts")
     private val likes = db.collection("likes")
     private val comments = db.collection("comments")
-    private val stories = db.collection("stories")
     private val notifs = db.collection("notifications")
 
     private fun uid() = auth.currentUser?.uid ?: throw IllegalStateException("Not signed in")
@@ -41,30 +35,15 @@ class FeedRepository @Inject constructor(
         return snap.documents.mapNotNull { it.toObject(Post::class.java)?.copy(id = it.id) }
     }
 
-    suspend fun createPost(content: String?, image: Uri?, video: Uri?, location: String?): String {
+    /** Text-only post (photo/video/location features removed). */
+    suspend fun createPost(content: String?): String {
         val uid = uid()
-        var imageUrl: String? = null
-        var videoUrl: String? = null
-        if (image != null) imageUrl = uploadMedia(image, "image")
-        if (video != null) videoUrl = uploadMedia(video, "video")
         val post = Post(
             user_id = uid,
-            content = content?.ifBlank { null },
-            image_url = imageUrl,
-            video_url = videoUrl,
-            location = location?.ifBlank { null }
+            content = content?.ifBlank { null }
         )
         val ref = posts.add(post).await()
         return ref.id
-    }
-
-    private suspend fun uploadMedia(uri: Uri, kind: String): String {
-        val uid = uid()
-        val ext = if (kind == "image") "img" else "mp4"
-        val path = "posts/$uid/post-${UUID.randomUUID()}.$ext"
-        val ref = storage.getReference(path)
-        ref.putFile(uri).await()
-        return ref.downloadUrl.await().toString()
     }
 
     suspend fun deletePost(postId: String, ownerId: String) {
@@ -115,24 +94,6 @@ class FeedRepository @Inject constructor(
 
     suspend fun deleteComment(commentId: String) {
         comments.document(commentId).delete().await()
-    }
-
-    // ---------- stories ----------
-    suspend fun recentStories(): List<Story> {
-        val cutoff = System.currentTimeMillis() / 1000 - 24 * 3600
-        val snap = stories.orderBy("created_at", Query.Direction.DESCENDING).get().await()
-        return snap.documents.mapNotNull { it.toObject(Story::class.java)?.copy(id = it.id) }
-            .filter { (it.created_at?.seconds ?: 0) >= cutoff }
-            .distinctBy { it.user_id }
-    }
-
-    suspend fun addStory(uri: Uri) {
-        val uid = uid()
-        val path = "posts/$uid/story-${UUID.randomUUID()}.img"
-        val ref = storage.getReference(path)
-        ref.putFile(uri).await()
-        val url = ref.downloadUrl.await().toString()
-        stories.add(Story(user_id = uid, image_url = url)).await()
     }
 
     // ---------- notifications ----------

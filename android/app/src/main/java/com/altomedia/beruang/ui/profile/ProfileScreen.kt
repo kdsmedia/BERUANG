@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +28,18 @@ import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.outlinedFieldColors
 import com.altomedia.beruang.ui.components.relTime
 import com.altomedia.beruang.ui.theme.*
+import java.io.File
+
+@Composable
+private fun profileAvatarModel(prof: Profile?): Any? {
+    if (prof == null) return null
+    val url = prof.avatar_url?.ifBlank { null } ?: return Profile.dicebearAvatar(prof.id)
+    if (url.startsWith("file://")) {
+        val exists = remember(url) { runCatching { File(url.removePrefix("file://")).exists() }.getOrDefault(false) }
+        return if (exists) url else Profile.dicebearAvatar(prof.id)
+    }
+    return url
+}
 
 @Composable
 fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
@@ -49,7 +62,8 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                         .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Bg, Green, Gold))))
                     Column(Modifier.padding(16.dp).offset(y = 44.dp)) {
                         Box(Modifier.size(92.dp).clip(CircleShape).background(Surface3)) {
-                            prof?.avatarOrDefault?.let {
+                            val avatarModel = profileAvatarModel(prof)
+                            avatarModel?.let {
                                 AsyncImage(model = it, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                             }
                         }
