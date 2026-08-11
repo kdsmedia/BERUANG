@@ -1,0 +1,26 @@
+BERUANG 1.0.0 — Rilis Awal
+
+Selamat datang di BERUANG, sosial media khas Indonesia!
+
+FITUR BARU (1.0.0):
+• Login dengan nomor telepon (format 08xxxxxxxx) — tanpa OTP, cukup kata sandi.
+• Feed beranda dengan story, composer posting (teks, foto, video, perasaan, lokasi), dan tab filter (For You / Friends / Groups / Trending).
+• Kartu postingan: like, komentar (dengan hapus komentar sendiri), menu titik-tiga (hapus/simpan), highlight hashtag.
+• Pertemanan: cari teman, permintaan masuk (terima/tolak), daftar teman (hapus), saran teman (tambah).
+• Pesan: chat privat 1:1 + chat global publik, bubble pesan, auto-tandai-sudah-dibaca.
+• Grup: buat grup (nama + deskripsi), gabung/keluar, daftar "Grup Saya" dan "Discover".
+• Notifikasi terpadu: suka, komentar, permintaan teman, pesan — dengan badge unread & "tandai semua dibaca".
+• Profil: banner sampul, avatar, bio, tab Posts/About/Friends, edit profil dengan pratinjau avatar langsung.
+• Emoji picker terkategori (Smileys, Gestures, Hearts, Animals, Food, Travel, Activities).
+• Keamanan: escaping HTML untuk cegah XSS, Row Level Security pada Firestore & Storage.
+
+PERBAIKAN & STABILITAS:
+• Audit kode: tidak ada data dummy/simulasi, tidak ada TODO/FIXME yang tersisa.
+• Wiring badge jumlah permintaan teman ke BadgesViewModel (sebelumnya dead code).
+• Penghapusan dead toast code pada MessagesViewModel.
+
+CATATAN:
+• Memerlukan Android 5.0 (API 21) ke atas.
+• Dibangun untuk target SDK 37.
+
+Terima kasih telah menjadi pengguna awal BERUANG. Saran & laporan bug: legal@altomedia.id

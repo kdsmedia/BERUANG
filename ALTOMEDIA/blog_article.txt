@@ -1,0 +1,64 @@
+BERUANG: Sosial Media Khas Indonesia untuk Bersama, Bercerita, dan Bertumbuh
+
+Oleh Tim Altomedia Indonesia — 11 Agustus 2026
+
+Di tengah lautan aplikasi sosial yang dirancang untuk pasar global, pengguna Indonesia sering kali harus menyesuaikan diri dengan pola interaksi yang tidak selalu nyaman. Mulai dari rumitnya pendaftaran yang mewajibkan alamat email, hingga tabiat antarmuka yang terlalu padat untuk koneksi internet di daerah dengan bandwidth terbatas. Dari kebutuhan inilah BERUANG lahir: sebuah aplikasi sosial media yang dirancang khas untuk pengguna Indonesia — ringan, ramah, dan lugas.
+
+Apa Itu BERUANG?
+
+BERUANG adalah aplikasi sosial media yang dikembangkan oleh Altomedia Indonesia. Nama "BERUANG" mengambil inspirasi dari hewan yang dikenal hangat, setia kawan, dan kuat — citra yang ingin kami bawa ke pengalaman berteman digital. Aplikasi ini menghadirkan fitur inti yang Anda harapkan dari sosial media modern: feed beranda, story, posting dengan foto dan video, like dan komentar, pesan privat, chat global, grup komunitas, serta halaman profil yang kaya. Namun yang membedakan adalah pendekatan kami terhadap pengalaman pengguna Indonesia.
+
+Login dengan Nomor Telepon, Tanpa Ribet OTP
+
+Salah satu hambatan terbesar bagi pengguna baru di banyak aplikasi adalah pendaftaran yang membutuhkan email. Bagi sebagian besar pengguna Indonesia, nomor telepon adalah identitas digital utama — bukan email. Karena itulah BERUANG memilih login berbasis nomor telepon dengan format 08xxxxxxxx yang akrab bagi kita semua. Anda cukup memasukkan nomor, membuat kata sandi, dan langsung masuk. Tidak ada langkah menunggu OTP, tidak ada SMS yang kadang telat atau gagal masuk. Sederhana, cepat, dan lugas.
+
+Kami menjaga keamanan akun dengan menyimpan kata sandi dalam bentuk hash terenkripsi melalui Firebase Authentication. Nomor telepon Anda tidak dibagikan ke publik; ia hanya menjadi identitas login internal. Dengan demikian, Anda dapat terhubung dengan teman tanpa khawatir nomor Anda tersebar tanpa kendali.
+
+Feed Beranda yang Hidup
+
+Saat membuka BERUANG, hal pertama yang Anda temui adalah feed beranda. Di sini, postingan terbaru dari teman-teman Anda tampil dengan rapi — lengkap dengan avatar, nama, waktu relatif, dan opsi untuk menyukai atau berkomentar. Anda dapat menambahkan story harian untuk berbagi momen singkat, atau membuat postingan panjang dengan foto, video, perasaan ("feeling"), dan tag lokasi tempat Anda berada.
+
+Komposer postingan didesain agar fleksibel. Tombol Photo dan Video memungkinkan Anda melampirkan media langsung dari galeri, dengan pratinjau sebelum mengunggah. Tombol Feeling menghadirkan daftar lebih dari tiga puluh perasaan siap pakai — dari "happy", "celebrating", hingga "relaxed" — lengkap dengan emoji. Tombol Location menyediakan daftar kota yang dapat dipilih, sehingga postingan Anda dapat menampilkan dari mana Anda berbagi. Dan bila ingin menambah sentuhan personal, emoji picker terkategori (Smileys, Gestures, Hearts, Animals, Food, Travel, Activities) siap menyisipkan emoji favorit di posisi kursor mana pun.
+
+Pertemanan yang Manusiawi
+
+BERUANG memahami bahwa sosial media intinya adalah tentang hubungan. Halaman Friends memberi Anda empat bagian: pencarian teman, permintaan pertemanan masuk, daftar teman saat ini, dan saran teman baru. Anda dapat menerima atau menolak permintaan, menghapus teman lama yang sudah tidak aktif, serta menambahkan kenalan baru yang belum berteman dengan Anda. Semua aksi terasa cepat dan ringan — tidak ada animasi berat atau iklan yang mengganggu alur.
+
+Pesan dan Chat Global
+
+Untuk percakapan privat, BERUANG menyediakan pesan satu-lawan-satu dengan tampilan bubble yang nyaman dibaca. Pesan baru yang masuk otomatis ditandai sudah dibaca saat Anda membuka thread, sehingga pengirim tahu Anda sudah melihatnya. Selain itu, ada chat global — satu ruang publik yang terbuka untuk semua pengguna BERUANG. Ini adalah tempat menyapa kawan baru, berdiskusi ringan, atau sekadar ikut suasana komunitas.
+
+Setiap kali seseorang mengirimi Anda pesan privat, Anda akan menerima notifikasi. Hal yang sama berlaku ketika seseorang menyukai atau mengomentari postingan Anda, atau mengirimi Anda permintaan pertemanan. Semua notifikasi terkumpul di halaman Notifications yang terpadu, lengkap dengan badge unread pada lonceng dan bilah navigasi bawah. Anda dapat menandai satu notifikasi sebagai sudah dibaca dengan mengetuknya, atau menandai semuanya sekaligus dengan satu tombol.
+
+Grup untuk Komunitas
+
+Setiap orang memiliki minat yang berbeda. Karena itulah BERUANG menghadirkan fitur Grup. Anda dapat membuat grup sendiri dengan nama dan deskripsi, lalu mengundang teman untuk bergabung. Anda juga dapat menjelajahi tab Discover untuk menemukan grup publik yang menarik minat Anda, lalu bergabung atau keluar kapan saja. Grup adalah ruang untuk mendiskusikan hobi, profesi, lingkungan, atau apa pun yang menyatukan Anda dan anggota lain.
+
+Profil yang Mewakili Diri Anda
+
+Halaman profil adalah etalase identitas digital Anda. Anda dapat memasang banner sampul, avatar, dan bio singkat. Tiga tab — Posts, About, Friends — memudahkan pengunjung melihat postingan terbaru Anda, membaca info singkat tentang diri Anda, dan mengetahui siapa saja teman Anda. Bila ingin memperbarui identitas, modal Edit Profile memungkinkan Anda mengganti nama, bio, dan avatar dengan pratinjau langsung sebelum menyimpan perubahan.
+
+Keamanan dan Privasi sebagai Fondasi
+
+Kami percaya bahwa sosial media yang sehat dimulai dari rasa aman. BERUANG dibangun di atas Firebase, dengan Row Level Security yang memastikan Anda hanya dapat menulis dan menghapus konten milik sendiri. Semua teks yang ditampilkan di-escape untuk mencegah serangan XSS. Klien aplikasi hanya menggunakan kunci publik (publishable key); kunci layanan (service role) tidak pernah disematkan ke dalam aplikasi, sehingga tidak ada celah untuk memanipulasi data secara ilegal dari sisi klien.
+
+Kebijakan Privasi dan Ketentuan Layanan kami ditulis dalam bahasa Indonesia dan tersedia untuk dibaca publik. Anda dapat mengaksesnya kapan saja, dan kami berkomitmen untuk transparan tentang data apa yang kami simpan, untuk apa, dan bagaimana Anda dapat menggunakan hak Anda — termasuk menghapus akun bila diinginkan.
+
+Dirancang untuk Semua, Dimulai dari Anda
+
+BERUANG dibangun dengan minSdk 21, yang berarti aplikasi ini dapat berjalan pada perangkat Android 5.0 ke atas — mencakup mayoritas ponsel yang beredar di Indonesia, dari kelas pemula hingga flagship. Antarmuka dirancang mobile-first dengan navigasi bawah dan header sticky, sehingga nyaman dioperasikan satu tangan. Kami juga menyusun pengalaman yang ekonomis terhadap data: tidak ada media yang diunggah saat Anda baru memilih foto, baru diunggah saat Anda benar-benar menekan tombol kirim.
+
+Versi 1.0.0 yang rilis kali ini adalah langkah awal. Kami sudah melewati audit kode untuk memastikan tidak ada data dummy atau simulasi yang tersisa, dan memperbaiki sejumlah kode yang tidak terpakai. Ke depan, kami akan terus menambah fitur, menelusuri masukan, dan menyempurnakan stabilitas.
+
+Bergabunglah dengan BERUANG
+
+Jika Anda mencari ruang sosial yang terasa lebih dekat dengan rumah — yang menghargai nomor telepon sebagai identitas, yang menjaga keamanan data, dan yang menyatukan fitur esensial tanpa berlebihan — BERUANG adalah tempatnya. Pasang aplikasi, buat akun dengan nomor HP Anda, mulai berbagi momen, dan temui kembali kehangatan berteman digital yang sederhana.
+
+Sampai jumpa di feed BERUANG.
+
+— Tim Altomedia Indonesia
+Email: privacy@altomedia.id | legal@altomedia.id
+Kebijakan Privasi: https://kdsmedia.github.io/BERUANG/privacy_policy.html
+Ketentuan Layanan: https://kdsmedia.github.io/BERUANG/terms_of_service.html
+
+(artikel ini disusun sebagai bagian paket rilis BERUANG 1.0.0)

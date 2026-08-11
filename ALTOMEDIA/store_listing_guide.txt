@@ -1,0 +1,100 @@
+==================================================
+STORE LISTING GUIDE — BERUANG
+(Isi field-field Play Console Main Store Listing)
+==================================================
+
+App name (max 30):
+BERUANG — Sosial Media
+
+Short description (max 80):
+Sosial media khas Indonesia. Posting, berteman, & ngobrol bareng BERUANG!
+
+Full description (max 4000):
+BERUANG — Sosial Media Indonesia
+
+BERUANG adalah aplikasi sosial media ringan, ramah, dan dirancang khas untuk pengguna Indonesia. Bagikan momen harianmu, berteman baru, ngobrol langsung, dan bangun komunitas sendiri — semua dalam satu aplikasi yang sederhana dan cepat.
+
+KENAPA BERUANG?
+
+• LOGIN NOMOR TELEPON
+Tidak perlu email. Cukup daftar dengan nomor HP format 08xxxxxxxx dan kata sandi buatanmu. Tanpa ribet OTP, tanpa menunggu SMS.
+
+• FEED BERANDA
+Lihat postingan terbaru dari teman-temanmu. Tambahkan story harian, buat postingan dengan foto, video, perasaan, dan tag lokasi. Filter feed sesuai suasana: For You, Friends, Groups, atau Trending.
+
+• PERTEMANAN
+Cari teman, terima permintaan pertemanan, dan temukan saran teman baru. Kelola daftar teman dengan mudah.
+
+• PESAN & CHAT GLOBAL
+Ngobrol privat satu-lawan-satu dengan bubble pesan yang nyaman, atau bergabung di chat global yang terbuka untuk semua pengguna BERUANG. Pesan baru otomatis ditandai sudah dibaca.
+
+• GRUP KOMUNITAS
+Buat grup sendiri dengan nama dan deskripsi, atau gabung ke grup publik. Atur daftar "Grup Saya" dan jelajahi "Discover" untuk menemukan komunitas baru.
+
+• NOTIFIKASI TERPADU
+Semua dalam satu tempat: suka, komentar, permintaan teman, dan pesan baru. Lihat badge unread di lonceng dan bilah bawah, lalu "tandai semua dibaca" sekali klik.
+
+• PROFIL KAYA
+Pasang banner sampul, avatar, dan bio. Tampilkan postinganmu, info "Tentang", dan daftar teman. Sunting profil dengan pratinjau avatar langsung sebelum menyimpan.
+
+• EMOJI PICKER
+Pilih emoji dari kategori: Smileys, Gestures, Hearts, Animals, Food, Travel, Activities. Sisipkan di postingan atau di pesan dengan cepat.
+
+PRIVASI & KEAMANAN
+Kami menjaga data Anda. Teks yang Anda lihat di-escape untuk mencegah XSS. Data disimpan dengan Row Level Security di Firebase, sehingga hanya pemilik yang dapat menulis/menghapus kontennya sendiri. Login menggunakan Firebase Authentication dengan kata sandi yang di-hash.
+
+BERUANG gratis untuk digunakan. Cocok untuk remaja (13+) hingga dewasa yang ingin tetap terhubung dengan keluarga, teman, dan komunitas.
+
+Kontak: privacy@altomedia.id | legal@altomedia.id
+Kebijakan Privasi: https://kdsmedia.github.io/BERUANG/privacy_policy.html
+Ketentuan Layanan: https://kdsmedia.github.io/BERUANG/terms_of_service.html
+
+==================================================
+Application category: Social
+Tags: Social, Community, Chat
+==================================================
+
+App icon (512x512, 32-bit PNG, NO alpha):
+  → listing_assets/icon_512.png
+
+Feature graphic (1024x500, JPG/PNG):
+  → listing_assets/feature_graphic_1024x500.png
+
+Phone screenshots (min 2, rekomendasi 4; JPEG/PNG, 16:9 or 9:16):
+  → listing_assets/screenshot_1_1080x1920.png  (Feed Beranda)
+  → listing_assets/screenshot_2_1080x1920.png  (Pertemanan)
+  → listing_assets/screenshot_3_1080x1920.png  (Pesan Langsung)
+  → listing_assets/screenshot_4_1080x1920.png  (Grup Komunitas)
+
+==================================================
+DATA SAFETY — jawaban kuesioner
+==================================================
+- Does your app collect or share personal data? YES
+- Data collected:
+  • Personal info: Phone number (login), Name (profile)
+  • Photos and videos: User-uploaded posts/avatars
+  • App activity: Post interactions, messages, friend actions
+  • App info or performance: Crash info (jika analytics on)
+- Is data encrypted in transit? YES
+- Can users request data deletion? YES
+- Is data shared? YES (content visible to other users per feature)
+- Data used for: App functionality, Account management
+
+==================================================
+CONTENT RATING — jawaban kuesioner (kategori Social)
+==================================================
+- App type: Social
+- Cartoon violence: No
+- Realistic violence: No
+- Sexual content: No
+- Profanity/hate: No
+- User-to-user interactions: Yes (chat, comments)
+- Unmoderated UGC: Partial — content moderated on report
+- Digital purchases: No
+→ Rating: PEGI 12 / Usia 13+ (estimasi)
+
+==================================================
+TARGET AUDIENCE
+==================================================
+- Target age group: 13 - 17 and 18+
+- App does not appeal to children under 13: Yes

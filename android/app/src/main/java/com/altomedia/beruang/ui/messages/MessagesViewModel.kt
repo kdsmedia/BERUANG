@@ -27,8 +27,6 @@ class MessagesViewModel @Inject constructor(
     val profilesMap: StateFlow<Map<String, Profile>> = _profiles
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading
-    private val _toast = MutableStateFlow<String?>(null)
-    val toast: StateFlow<String?> = _toast
 
     private val _global = MutableStateFlow<List<GlobalMessage>>(emptyList())
     val global: StateFlow<List<GlobalMessage>> = _global
@@ -73,6 +71,4 @@ class MessagesViewModel @Inject constructor(
         repo.send(partnerUid, text, feed)
         _thread.value = repo.threadWith(partnerUid)
     }
-
-    fun toastShown() { _toast.value = null }
 }

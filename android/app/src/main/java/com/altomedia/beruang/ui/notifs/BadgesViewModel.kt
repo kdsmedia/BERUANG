@@ -2,6 +2,7 @@ package com.altomedia.beruang.ui.notifs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.altomedia.beruang.data.repo.FriendsRepository
 import com.altomedia.beruang.data.repo.MessagesRepository
 import com.altomedia.beruang.data.repo.NotificationsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class BadgesViewModel @Inject constructor(
     private val notifsRepo: NotificationsRepository,
-    private val messagesRepo: MessagesRepository
+    private val messagesRepo: MessagesRepository,
+    private val friendsRepo: FriendsRepository
 ) : ViewModel() {
     private val _notifUnread = MutableStateFlow(0)
     val notifUnread: StateFlow<Int> = _notifUnread
@@ -30,6 +32,6 @@ class BadgesViewModel @Inject constructor(
         _notifUnread.value = notifsRepo.unreadCount()
         val convos = messagesRepo.conversationList()
         _msgUnread.value = convos.sumOf { it.unread }
-        _frPending.value = 0 // updated by FriendsViewModel; kept for badge wiring
+        _frPending.value = friendsRepo.state().pendingIn.size
     }
 }
