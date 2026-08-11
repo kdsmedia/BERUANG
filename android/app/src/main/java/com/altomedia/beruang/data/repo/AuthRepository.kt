@@ -36,11 +36,21 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut() { auth.signOut() }
 
-    private fun mapError(e: Throwable): AuthError = when (e) {
-        is FirebaseAuthWeakPasswordException -> AuthError.WeakPassword
-        is FirebaseAuthInvalidCredentialsException -> AuthError.InvalidCredentials
-        is FirebaseAuthUserCollisionException -> AuthError.EmailInUse
-        else -> AuthError.Generic(e.message ?: "Authentication failed")
+    private fun mapError(e: Throwable): AuthError {
+        // CONFIGURATION_NOT_FOUND: project exists & API key valid, but the
+        // Email/Password sign-in provider is not enabled in the Firebase Console
+        // (Authentication → Sign-in method → Email/Password). This is a backend
+        // config issue, not a code/app issue — no APK change can fix it.
+        val msg = e.message.orEmpty()
+        if (msg.contains("CONFIGURATION_NOT_FOUND", ignoreCase = true)) {
+            return AuthError.ConfigurationNotFound
+        }
+        return when (e) {
+            is FirebaseAuthWeakPasswordException -> AuthError.WeakPassword
+            is FirebaseAuthInvalidCredentialsException -> AuthError.InvalidCredentials
+            is FirebaseAuthUserCollisionException -> AuthError.EmailInUse
+            else -> AuthError.Generic(msg.ifBlank { "Authentication failed" })
+        }
     }
 }
 
@@ -48,5 +58,9 @@ sealed class AuthError(message: String) : Exception(message) {
     data object WeakPassword : AuthError("Password must be at least 6 characters.")
     data object InvalidCredentials : AuthError("Invalid email or password.")
     data object EmailInUse : AuthError("That email is already in use.")
+    data object ConfigurationNotFound : AuthError(
+        "Login belum bisa dipakai. Aktifkan sign-in Email/Password di Firebase Console " +
+        "(Authentication → Sign-in method → Email/Password → Enable)."
+    )
     class Generic(message: String) : AuthError(message)
 }
