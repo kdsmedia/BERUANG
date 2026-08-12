@@ -2,6 +2,7 @@ package com.altomedia.beruang.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,11 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.altomedia.beruang.R
 import com.altomedia.beruang.ui.components.EmojiPickerSheet
 import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.FeelingPickerSheet
@@ -132,7 +135,12 @@ private fun HomeTopBar(notifUnread: Int, onAlerts: () -> Unit) {
                 Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(R.drawable.logo_beruang),
+                        contentDescription = null,
+                        modifier = Modifier.size(30.dp).padding(end = 6.dp)
+                    )
                     Text("BERU", color = Green, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text("ANG", color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }

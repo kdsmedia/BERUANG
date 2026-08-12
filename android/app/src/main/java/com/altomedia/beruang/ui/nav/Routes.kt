@@ -1,24 +1,19 @@
 package com.altomedia.beruang.ui.nav
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Comment
-import androidx.compose.material.icons.automirrored.outlined.Comment
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.House
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.House
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.altomedia.beruang.R
 
-enum class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    Home("home", "Home", Icons.Outlined.House, Icons.Filled.House),
-    Friends("friends", "Friends", Icons.Outlined.Group, Icons.Filled.Group),
-    Messages("messages", "Messages", Icons.AutoMirrored.Outlined.Comment, Icons.AutoMirrored.Filled.Comment),
-    Groups("groups", "Groups", Icons.Outlined.Group, Icons.Filled.Group),
-    Me("profile", "Me", Icons.Outlined.Person, Icons.Filled.Person)
+enum class Tab(
+    val route: String,
+    val label: String,
+    @DrawableRes val icon: Int,
+    @DrawableRes val selectedIcon: Int
+) {
+    Home("home", "Home", R.drawable.nav_home_off, R.drawable.nav_home_on),
+    Friends("friends", "Friends", R.drawable.nav_friends_off, R.drawable.nav_friends_on),
+    Messages("messages", "Messages", R.drawable.nav_messages_off, R.drawable.nav_messages_on),
+    Groups("groups", "Groups", R.drawable.nav_groups_off, R.drawable.nav_groups_on),
+    Me("profile", "Me", R.drawable.nav_profile_off, R.drawable.nav_profile_on)
 }
 
 object Routes {

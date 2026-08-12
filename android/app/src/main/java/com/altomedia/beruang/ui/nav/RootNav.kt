@@ -2,7 +2,10 @@ package com.altomedia.beruang.ui.nav
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,15 +94,20 @@ fun RootNav() {
 
 @Composable
 private fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
-    Surface(color = Surface, tonalElevation = 0.dp, shadowElevation = 8.dp) {
+    Surface(
+        color = Surface,
+        tonalElevation = 0.dp,
+        shadowElevation = 12.dp,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding(),
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(top = 6.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             Tab.entries.forEach { tab ->
                 val selected = currentRoute == tab.route
                 Column(
-                    Modifier.weight(1f).padding(vertical = 6.dp),
+                    Modifier.weight(1f).padding(vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     NavigationIcon(tab, selected, onNavigate)
@@ -106,7 +115,7 @@ private fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
                         tab.label,
                         fontSize = 10.sp,
                         color = if (selected) Green else Muted,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                     )
                 }
             }
@@ -117,13 +126,23 @@ private fun BottomBar(currentRoute: String?, onNavigate: (String) -> Unit) {
 @Composable
 private fun NavigationIcon(tab: Tab, selected: Boolean, onNavigate: (String) -> Unit) {
     Box(contentAlignment = Alignment.TopEnd) {
-        IconButton(onClick = { onNavigate(tab.route) }) {
-            Icon(
-                if (selected) tab.selectedIcon else tab.icon,
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (selected) GreenSoft else androidx.compose.ui.graphics.Color.Transparent)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            Image(
+                painter = androidx.compose.ui.res.painterResource(if (selected) tab.selectedIcon else tab.icon),
                 contentDescription = tab.label,
-                tint = if (selected) Green else Text
+                modifier = Modifier.size(26.dp)
             )
         }
+        IconButton(
+            onClick = { onNavigate(tab.route) },
+            modifier = Modifier.matchParentSize()
+        ) {}
         if (tab == Tab.Friends) {
             val vm = androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.notifs.BadgesViewModel>()
             val count by vm.frPending.collectAsState()

@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp" android:height="28dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- big bubble (green) -->
+    <path android:fillColor="#16A34A"
+        android:pathData="M4,4 L20,4 C20.55,4 21,4.45 21,5 L21,15 C21,15.55 20.55,16 20,16 L13,16 L9,20 L9,16 L4,16 C3.45,16 3,15.55 3,15 L3,5 C3,4.45 3.45,4 4,4 Z"/>
+    <!-- dots (cream) -->
+    <path android:fillColor="#FFF7E6"
+        android:pathData="M7.5,10 C7.5,9.2 8.1,8.6 8.9,8.6 C9.7,8.6 10.3,9.2 10.3,10 C10.3,10.8 9.7,11.4 8.9,11.4 C8.1,11.4 7.5,10.8 7.5,10 Z"/>
+    <path android:fillColor="#FFF7E6"
+        android:pathData="M10.9,10 C10.9,9.2 11.5,8.6 12.3,8.6 C13.1,8.6 13.7,9.2 13.7,10 C13.7,10.8 13.1,11.4 12.3,11.4 C11.5,11.4 10.9,10.8 10.9,10 Z"/>
+    <path android:fillColor="#FFF7E6"
+        android:pathData="M14.3,10 C14.3,9.2 14.9,8.6 15.7,8.6 C16.5,8.6 17.1,9.2 17.1,10 C17.1,10.8 16.5,11.4 15.7,11.4 C14.9,11.4 14.3,10.8 14.3,10 Z"/>
+</vector>
