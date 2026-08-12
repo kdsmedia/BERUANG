@@ -11,7 +11,8 @@ import javax.inject.Singleton
 @Singleton
 class FriendsRepository @Inject constructor(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val accounts: AccountsRepository
 ) {
     private val fs = db.collection("friendships")
     private fun uid() = auth.currentUser?.uid ?: throw IllegalStateException("Not signed in")
@@ -54,6 +55,8 @@ class FriendsRepository @Inject constructor(
     suspend fun accept(friendship: Friendship, repo: FeedRepository) {
         fs.document(friendship.id).update("status", "accepted").await()
         val other = if (friendship.user_id == uid()) friendship.friend_id else friendship.user_id
+        // +10 poin untuk tiap pengguna saat pertemanan terbentuk.
+        runCatching { accounts.awardPoints(uid(), 10); accounts.awardPoints(other, 10) }
         repo.createNotif(other, "friend_accept", null, "accepted your friend request")
     }
 

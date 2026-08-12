@@ -53,17 +53,25 @@ class ProfileRepository @Inject constructor(
         }
     }
 
-    suspend fun update(name: String?, bio: String?, avatarUrl: String?): Profile? {
+    suspend fun update(
+        name: String?, bio: String?, avatarUrl: String?,
+        phone: String? = null, email: String? = null, gender: String? = null
+    ): Profile? {
         val uid = currentUid ?: return null
         // Use set+merge (upsert) instead of update() so editing works even when
         // the profile document doesn't exist yet (update() throws on a missing
         // doc, which was breaking Edit Profile).
         val base = cache[uid] ?: runCatching { profiles.document(uid).get().await() }
             .getOrNull()?.toObject(Profile::class.java)?.copy(id = uid)
+        // Treat email as "clear" only when explicitly set to empty; null means "leave unchanged".
+        val emailVal = email?.ifBlank { null }
         val merged = (base ?: Profile(id = uid)).copy(
             full_name = name ?: (base?.full_name),
             bio = bio ?: (base?.bio),
-            avatar_url = avatarUrl ?: (base?.avatar_url)
+            avatar_url = avatarUrl ?: (base?.avatar_url),
+            phone = phone ?: (base?.phone),
+            email = emailVal ?: (base?.email),
+            gender = gender ?: (base?.gender)
         )
         profiles.document(uid).set(merged, com.google.firebase.firestore.SetOptions.merge()).await()
         cache[uid] = merged

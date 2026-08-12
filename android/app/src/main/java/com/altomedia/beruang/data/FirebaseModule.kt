@@ -1,5 +1,6 @@
 package com.altomedia.beruang.data
 
+import com.altomedia.beruang.data.repo.AccountsRepository
 import com.altomedia.beruang.data.repo.AuthRepository
 import com.altomedia.beruang.data.repo.FeedRepository
 import com.altomedia.beruang.data.repo.FriendsRepository
@@ -22,8 +23,9 @@ object FirebaseModule {
     @Provides @Singleton fun firestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 
     @Provides @Singleton fun profileRepo(db: FirebaseFirestore, auth: FirebaseAuth) = ProfileRepository(db, auth)
-    @Provides @Singleton fun feedRepo(db: FirebaseFirestore, auth: FirebaseAuth) = FeedRepository(db, auth)
-    @Provides @Singleton fun friendsRepo(db: FirebaseFirestore, auth: FirebaseAuth) = FriendsRepository(db, auth)
+    @Provides @Singleton fun accountsRepo(db: FirebaseFirestore, auth: FirebaseAuth) = AccountsRepository(db, auth)
+    @Provides @Singleton fun feedRepo(db: FirebaseFirestore, auth: FirebaseAuth, accounts: AccountsRepository) = FeedRepository(db, auth, accounts)
+    @Provides @Singleton fun friendsRepo(db: FirebaseFirestore, auth: FirebaseAuth, accounts: AccountsRepository) = FriendsRepository(db, auth, accounts)
     @Provides @Singleton fun messagesRepo(db: FirebaseFirestore, auth: FirebaseAuth) = MessagesRepository(db, auth)
     @Provides @Singleton fun groupsRepo(db: FirebaseFirestore, auth: FirebaseAuth) = GroupsRepository(db, auth)
     @Provides @Singleton fun notifsRepo(db: FirebaseFirestore, auth: FirebaseAuth) = NotificationsRepository(db, auth)

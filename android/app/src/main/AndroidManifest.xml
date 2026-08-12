@@ -11,6 +11,9 @@
         android:maxSdkVersion="29" />
     <!-- Scoped media access for Android 13+ (API 33+). -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Camera for QR scanning (points transfer). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".BeruangApp"

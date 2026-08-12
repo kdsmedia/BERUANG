@@ -87,6 +87,23 @@ service cloud.firestore {
       allow update: if signedIn() && resource.data.user_id == uid();
     }
 
+    // ---- transactions (points transfers) ----
+    match /transactions/{txId} {
+      allow read: if signedIn() && (resource.data.from_id == uid() || resource.data.to_id == uid());
+      allow create: if signedIn() && request.resource.data.from_id == uid();
+    }
+
+    // ---- wallets (points balances) ----
+    // Document id == user id. balance is the points balance.
+    // NOTE: update is open to any signed-in user so a peer-to-peer transfer can
+    // credit the recipient's wallet from the sender's client. For full security
+    // (prevent balance tampering) move the debit/credit into a Cloud Function.
+    match /wallets/{uid} {
+      allow read: if true;
+      allow create: if signedIn() && uid == request.auth.uid;
+      allow update: if signedIn();
+    }
+
     // deny everything else
     match /{document=**} {
       allow read, write: if false;

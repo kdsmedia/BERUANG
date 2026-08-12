@@ -8,14 +8,14 @@ plugins {
 
 android {
     namespace = "com.altomedia.beruang"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.altomedia.beruang"
         minSdk = 21
-        targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.0"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "1.1.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -81,6 +81,18 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     // Note: firebase-storage removed — media now stored in device local storage.
+
+    // QR code generation (ZXing core, no Android-specific deps)
+    implementation("com.google.zxing:core:3.5.3")
+
+    // Camera + ML Kit barcode scanning (for points transfer via QR)
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")

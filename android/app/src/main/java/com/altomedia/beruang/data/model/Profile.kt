@@ -10,6 +10,12 @@ data class Profile(
     val bio: String? = "Hey there! I am using JavaGoat.",
     val avatar_url: String? = null,
     val cover_url: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val gender: String? = null, // "male" | "female" | "other"
+    val points: Long = 0,
+    val points_pin: String? = null, // SHA-256 hash of the 4-digit PIN
+    val account_id: String? = null, // 6-digit virtual account number
     @ServerTimestamp val created_at: Timestamp? = null
 ) {
     val displayName get() = full_name ?: "New Goat"

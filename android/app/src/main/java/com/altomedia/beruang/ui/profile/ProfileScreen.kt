@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,6 +62,12 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
     var showEdit by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(s.toast) { s.toast?.let { snackbar.showSnackbar(it); vm.toastShown() } }
+
+    // Points wallet dialogs (own profile only)
+    var showMyQr by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf(false) }
+    var scannedAccountId by remember { mutableStateOf<String?>(null) }
+    var transferBusy by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -121,6 +131,16 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                 }
                 HorizontalDivider(color = Line, thickness = 6.dp)
             }
+            // Points wallet — only on the signed-in user's own profile.
+            if (targetUid == myUid) {
+                item {
+                    ProfilePointsSection(
+                        profile = s.profile,
+                        onShowQr = { showMyQr = true },
+                        onScan = { scanning = true }
+                    )
+                }
+            }
             item {
                 TabRow(selectedTabIndex = listOf("posts", "about", "friends").indexOf(tab), containerColor = Surface, contentColor = Green) {
                     Tab(selected = tab == "posts", onClick = { tab = "posts" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("Posts", Modifier.padding(10.dp)) }
@@ -144,6 +164,11 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                     Column(Modifier.padding(14.dp)) {
                         AboutRow("Bio", s.profile?.bio ?: "No bio yet.")
                         AboutRow("Name", s.profile?.displayName ?: "User")
+                        AboutRow("Phone", s.profile?.phone?.ifBlank { null } ?: "-")
+                        AboutRow("Email", s.profile?.email?.ifBlank { null } ?: "-")
+                        AboutRow("Gender", when (s.profile?.gender) { "male" -> "Pria"; "female" -> "Wanita"; "other" -> "Lainnya"; else -> "-" })
+                        AboutRow("Account ID", s.profile?.account_id ?: "-")
+                        AboutRow("Points", "${s.profile?.points ?: 0} pts")
                         AboutRow("Joined", relTime(s.profile?.created_at))
                     }
                 }
@@ -165,7 +190,43 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
         EditProfileDialog(
             prof = s.profile,
             onDismiss = { showEdit = false },
-            onSave = { n, b, preset -> vm.updateProfile(n, b, preset); showEdit = false }
+            onSave = { n, b, preset, phone, email, gender ->
+                vm.updateProfile(n, b, preset, phone, email, gender); showEdit = false
+            }
+        )
+    }
+
+    if (showMyQr) {
+        MyQrDialog(profile = s.profile, onDismiss = { showMyQr = false })
+    }
+
+    if (scanning) {
+        QrScannerScreen(
+            onScanned = { value ->
+                scanning = false
+                scannedAccountId = value
+            },
+            onBack = { scanning = false }
+        )
+    }
+
+    val target = scannedAccountId
+    if (target != null) {
+        TransferDialog(
+            recipientAccountId = target,
+            hasPin = s.hasPin,
+            busy = transferBusy,
+            onDismiss = { scannedAccountId = null },
+            onCreatePin = { pin ->
+                vm.setPin(pin)
+                scannedAccountId = null // PIN dibuat; scan ulang untuk transfer
+            },
+            onTransfer = { amount, pin ->
+                transferBusy = true
+                vm.transfer(target, amount, pin)
+                scannedAccountId = null
+                transferBusy = false
+            }
         )
     }
 }
@@ -192,10 +253,13 @@ private fun AboutRow(label: String, value: String) {
 private fun EditProfileDialog(
     prof: Profile?,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?) -> Unit
+    onSave: (String, String, String?, String, String, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(prof?.displayName ?: "") }
     var bio by remember { mutableStateOf(prof?.bio ?: "") }
+    var phone by remember { mutableStateOf(prof?.phone ?: "") }
+    var email by remember { mutableStateOf(prof?.email ?: "") }
+    var gender by remember { mutableStateOf(prof?.gender) }
     // current selected preset key (null = keep existing / dicebear)
     var selectedPreset by remember { mutableStateOf(prof?.avatar_url?.takeIf { it.startsWith("preset:") }?.removePrefix("preset:")) }
 
@@ -203,7 +267,7 @@ private fun EditProfileDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             Button(
-                onClick = { onSave(name, bio, selectedPreset?.let { presetKeyToUrl(it) }) },
+                onClick = { onSave(name, bio, selectedPreset?.let { presetKeyToUrl(it) }, phone.trim(), email.trim(), gender) },
                 colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White),
                 shape = RoundedCornerShape(8.dp)
             ) { Text("Save", fontWeight = FontWeight.SemiBold) }
@@ -211,14 +275,14 @@ private fun EditProfileDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Muted) } },
         title = { Text("Edit Profile", color = Text, fontWeight = FontWeight.Bold) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Choose avatar", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(PRESET_AVATARS) { pa ->
                         val selected = selectedPreset == pa.key
                         Box(
-                            Modifier.size(72.dp).clip(CircleShape).background(Surface2)
+                            Modifier.size(64.dp).clip(CircleShape).background(Surface2)
                                 .then(if (selected) Modifier.border(3.dp, Green, CircleShape) else Modifier.border(1.dp, Line, CircleShape))
                                 .clickable { selectedPreset = pa.key },
                             contentAlignment = Alignment.Center
@@ -228,8 +292,26 @@ private fun EditProfileDialog(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nama lengkap") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
                 Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = phone, onValueChange = { phone = it.filter { c -> c.isDigit() } }, label = { Text("Nomor HP (08xxx)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email (opsional)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
+                Spacer(Modifier.height(8.dp))
+                Text("Jenis kelamin", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("male" to "Pria", "female" to "Wanita", "other" to "Lainnya").forEach { (k, label) ->
+                        val selected = gender == k
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(50))
+                                .then(if (selected) Modifier.background(Green) else Modifier.background(Surface2))
+                                .clickable { gender = if (gender == k) null else k }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) { Text(label, color = if (selected) androidx.compose.ui.graphics.Color.White else Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium) }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") }, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
             }
         }

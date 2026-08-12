@@ -14,7 +14,8 @@ import javax.inject.Singleton
 @Singleton
 class FeedRepository @Inject constructor(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val accounts: AccountsRepository
 ) {
     private val posts = db.collection("posts")
     private val likes = db.collection("likes")
@@ -60,6 +61,7 @@ class FeedRepository @Inject constructor(
             created_at = com.google.firebase.Timestamp.now()
         )
         val ref = posts.add(post).await()
+        runCatching { accounts.awardPoints(uid, 20) } // +20 poin per posting
         return ref.id
     }
 
@@ -110,6 +112,7 @@ class FeedRepository @Inject constructor(
             created_at = com.google.firebase.Timestamp.now()
         )
         val ref = comments.add(c).await()
+        runCatching { accounts.awardPoints(uid, 50) } // +50 poin per komentar
         if (postOwner != uid) createNotif(postOwner, "comment", postId, "commented on your post")
         return c.copy(id = ref.id)
     }
