@@ -30,9 +30,13 @@ class FeedRepository @Inject constructor(
     }
 
     suspend fun postsByUser(userId: String): List<Post> {
-        val snap = posts.whereEqualTo("user_id", userId)
-            .orderBy("created_at", Query.Direction.DESCENDING).get().await()
+        // NOTE: querying whereEqualTo + orderBy on a different field requires a
+        // composite index in Firestore, which is often missing and throws
+        // FAILED_PRECONDITION (crashing the profile screen). To avoid that,
+        // we fetch by user_id only and sort in memory.
+        val snap = posts.whereEqualTo("user_id", userId).get().await()
         return snap.documents.mapNotNull { it.toObject(Post::class.java)?.copy(id = it.id) }
+            .sortedByDescending { it.created_at?.seconds ?: 0 }
     }
 
     /** Text-only post (photo/video/location features removed). */

@@ -1,12 +1,13 @@
 package com.altomedia.beruang.ui.profile
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,7 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,17 +28,20 @@ import coil.compose.AsyncImage
 import com.altomedia.beruang.data.model.Profile
 import com.altomedia.beruang.ui.components.Avatar
 import com.altomedia.beruang.ui.components.EmptyState
+import com.altomedia.beruang.ui.components.PRESET_AVATARS
 import com.altomedia.beruang.ui.components.outlinedFieldColors
+import com.altomedia.beruang.ui.components.presetDrawableFor
+import com.altomedia.beruang.ui.components.presetKeyToUrl
 import com.altomedia.beruang.ui.components.relTime
 import com.altomedia.beruang.ui.theme.*
-import java.io.File
 
 @Composable
 private fun profileAvatarModel(prof: Profile?): Any? {
     if (prof == null) return null
+    presetDrawableFor(prof.avatar_url)?.let { return it }
     val url = prof.avatar_url?.ifBlank { null } ?: return Profile.dicebearAvatar(prof.id)
     if (url.startsWith("file://")) {
-        val exists = remember(url) { runCatching { File(url.removePrefix("file://")).exists() }.getOrDefault(false) }
+        val exists = remember(url) { runCatching { java.io.File(url.removePrefix("file://")).exists() }.getOrDefault(false) }
         return if (exists) url else Profile.dicebearAvatar(prof.id)
     }
     return url
@@ -60,13 +64,10 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
         containerColor = Bg,
         topBar = {
             Surface(color = Surface) {
-                Row(
-                    Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Profile", color = Text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Column(Modifier.statusBarsPadding()) {
+                    Text("Profile", color = Text, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                    HorizontalDivider(color = Line, thickness = 0.5.dp)
                 }
-                HorizontalDivider(color = Line, thickness = 0.5.dp)
             }
         }
     ) { p ->
@@ -77,8 +78,12 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(88.dp).clip(CircleShape).background(Surface3)) {
                             val avatarModel = profileAvatarModel(prof)
-                            avatarModel?.let {
-                                AsyncImage(model = it, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                            avatarModel?.let { model ->
+                                if (model is Int) {
+                                    Image(painter = painterResource(model), contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                                } else {
+                                    AsyncImage(model = model, contentDescription = "avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                                }
                             }
                         }
                         Spacer(Modifier.width(16.dp))
@@ -117,7 +122,7 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                 HorizontalDivider(color = Line, thickness = 6.dp)
             }
             item {
-                TabRow(selectedTabIndex = listOf("posts","about","friends").indexOf(tab), containerColor = Surface, contentColor = Green) {
+                TabRow(selectedTabIndex = listOf("posts", "about", "friends").indexOf(tab), containerColor = Surface, contentColor = Green) {
                     Tab(selected = tab == "posts", onClick = { tab = "posts" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("Posts", Modifier.padding(10.dp)) }
                     Tab(selected = tab == "about", onClick = { tab = "about" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("About", Modifier.padding(10.dp)) }
                     Tab(selected = tab == "friends", onClick = { tab = "friends" }, selectedContentColor = Green, unselectedContentColor = Muted) { Text("Friends", Modifier.padding(10.dp)) }
@@ -130,7 +135,6 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                         Surface(Modifier.fillMaxWidth().padding(8.dp, 4.dp), shape = RoundedCornerShape(14.dp), color = Surface, border = androidx.compose.foundation.BorderStroke(1.dp, Line)) {
                             Column {
                                 post.content?.let { Text(it, color = Text, modifier = Modifier.padding(12.dp)) }
-                                post.image_url?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) }
                                 Text(relTime(post.created_at), color = Muted, fontSize = 11.sp, modifier = Modifier.padding(12.dp, 4.dp))
                             }
                         }
@@ -157,7 +161,13 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
         }
     }
 
-    if (showEdit) EditProfileDialog(prof = s.profile, onDismiss = { showEdit = false }, onSave = { n, b, uri -> vm.updateProfile(n, b, uri); showEdit = false })
+    if (showEdit) {
+        EditProfileDialog(
+            prof = s.profile,
+            onDismiss = { showEdit = false },
+            onSave = { n, b, preset -> vm.updateProfile(n, b, preset); showEdit = false }
+        )
+    }
 }
 
 @Composable
@@ -179,23 +189,45 @@ private fun AboutRow(label: String, value: String) {
 }
 
 @Composable
-private fun EditProfileDialog(prof: Profile?, onDismiss: () -> Unit, onSave: (String, String, Uri?) -> Unit) {
+private fun EditProfileDialog(
+    prof: Profile?,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String?) -> Unit
+) {
     var name by remember { mutableStateOf(prof?.displayName ?: "") }
     var bio by remember { mutableStateOf(prof?.bio ?: "") }
-    var avatarUri by remember { mutableStateOf<Uri?>(null) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { avatarUri = it }
+    // current selected preset key (null = keep existing / dicebear)
+    var selectedPreset by remember { mutableStateOf(prof?.avatar_url?.takeIf { it.startsWith("preset:") }?.removePrefix("preset:")) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { Button(onClick = { onSave(name, bio, avatarUri) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White), shape = RoundedCornerShape(8.dp)) { Text("Save", fontWeight = FontWeight.SemiBold) } },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name, bio, selectedPreset?.let { presetKeyToUrl(it) }) },
+                colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White),
+                shape = RoundedCornerShape(8.dp)
+            ) { Text("Save", fontWeight = FontWeight.SemiBold) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Muted) } },
         title = { Text("Edit Profile", color = Text, fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                Box(Modifier.size(96.dp).clip(CircleShape).background(Surface3), contentAlignment = Alignment.Center) {
-                    val url = avatarUri?.toString() ?: prof?.avatarOrDefault
-                    if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                Text("Choose avatar", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(PRESET_AVATARS) { pa ->
+                        val selected = selectedPreset == pa.key
+                        Box(
+                            Modifier.size(72.dp).clip(CircleShape).background(Surface2)
+                                .then(if (selected) Modifier.border(3.dp, Green, CircleShape) else Modifier.border(1.dp, Line, CircleShape))
+                                .clickable { selectedPreset = pa.key },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(painter = painterResource(pa.resId), contentDescription = pa.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                        }
+                    }
                 }
-                TextButton(onClick = { picker.launch("image/*") }) { Text("Change avatar", color = Green, fontWeight = FontWeight.SemiBold) }
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("Bio") }, modifier = Modifier.fillMaxWidth(), colors = outlinedFieldColors(), shape = RoundedCornerShape(12.dp))

@@ -13,6 +13,9 @@ data class Profile(
     @ServerTimestamp val created_at: Timestamp? = null
 ) {
     val displayName get() = full_name ?: "New Goat"
+    /** True when the avatar is one of the bundled presets (stored as "preset:<key>"). */
+    val isPreset get() = avatar_url?.startsWith("preset:") == true
+    /** Legacy/default avatar: dicebear generated image (needs internet). */
     val avatarOrDefault get() = avatar_url?.ifBlank { null } ?: dicebearAvatar(id)
     companion object {
         fun dicebearAvatar(seed: String) =
