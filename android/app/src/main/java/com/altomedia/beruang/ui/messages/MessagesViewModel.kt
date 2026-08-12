@@ -37,22 +37,24 @@ class MessagesViewModel @Inject constructor(
 
     fun refresh() = viewModelScope.launch {
         _loading.value = true
-        _convos.value = repo.conversationList()
-        val ids = _convos.value.map { it.partnerId }
-        val map = ids.map { it to profiles.get(it) }.toMap()
-        _profiles.value = map
-        _loading.value = false
+        try {
+            _convos.value = runCatching { repo.conversationList() }.getOrDefault(emptyList())
+            val ids = _convos.value.map { it.partnerId }
+            _profiles.value = ids.mapNotNull { runCatching { it to profiles.get(it) }.getOrNull() }.toMap()
+        } finally { _loading.value = false }
     }
 
     fun loadGlobal() = viewModelScope.launch {
-        _global.value = repo.globalMessages()
-        val ids = _global.value.map { it.user_id }.distinct()
-        _globalProfiles.value = ids.map { it to profiles.get(it) }.toMap()
+        try {
+            _global.value = repo.globalMessages()
+            val ids = _global.value.map { it.user_id }.distinct()
+            _globalProfiles.value = ids.mapNotNull { runCatching { it to profiles.get(it) }.getOrNull() }.toMap()
+        } catch (e: Exception) { /* keep empty, don't crash */ }
     }
 
     fun sendGlobal(text: String) = viewModelScope.launch {
         if (text.isBlank()) return@launch
-        repo.sendGlobal(text); loadGlobal()
+        try { repo.sendGlobal(text); loadGlobal() } catch (e: Exception) { /* ignore */ }
     }
 
     // ---- 1:1 thread ----
@@ -62,13 +64,17 @@ class MessagesViewModel @Inject constructor(
     val partner: StateFlow<Profile?> = _partner
 
     fun openThread(partnerUid: String) = viewModelScope.launch {
-        _partner.value = profiles.get(partnerUid)
-        _thread.value = repo.threadWith(partnerUid)
+        try {
+            _partner.value = profiles.get(partnerUid)
+            _thread.value = repo.threadWith(partnerUid)
+        } catch (e: Exception) { /* keep empty, don't crash */ }
     }
 
     fun send(partnerUid: String, text: String) = viewModelScope.launch {
         if (text.isBlank()) return@launch
-        repo.send(partnerUid, text, feed)
-        _thread.value = repo.threadWith(partnerUid)
+        try {
+            repo.send(partnerUid, text, feed)
+            _thread.value = repo.threadWith(partnerUid)
+        } catch (e: Exception) { /* ignore */ }
     }
 }

@@ -3,6 +3,7 @@ package com.altomedia.beruang.ui.nav
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +38,16 @@ fun RootNav() {
     val showBottomBar = currentRoute in setOf(
         Routes.Home, Routes.Friends, Routes.Messages, Routes.Groups, Routes.Notifs, Routes.Profile
     )
+
+    // On any main tab other than Home, the device back button returns to Home
+    // (instead of exiting the app). Sub-routes (chat / profile view) pop normally.
+    val tabRoutes = setOf(Routes.Friends, Routes.Messages, Routes.Groups, Routes.Notifs, Routes.Profile)
+    BackHandler(enabled = currentRoute in tabRoutes) {
+        nav.navigate(Routes.Home) {
+            popUpTo(Routes.Home) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     Scaffold(
         bottomBar = {

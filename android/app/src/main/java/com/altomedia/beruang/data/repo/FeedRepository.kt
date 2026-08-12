@@ -96,14 +96,19 @@ class FeedRepository @Inject constructor(
 
     // ---------- comments ----------
     suspend fun commentsForPost(postId: String): List<Comment> {
-        val snap = comments.whereEqualTo("post_id", postId)
-            .orderBy("created_at", Query.Direction.ASCENDING).get().await()
+        // whereEqualTo("post_id") + orderBy("created_at") needs a composite
+        // index; fetch plain and sort in memory so comments always load.
+        val snap = comments.whereEqualTo("post_id", postId).limit(200).get().await()
         return snap.documents.mapNotNull { it.toObject(Comment::class.java)?.copy(id = it.id) }
+            .sortedBy { it.created_at?.seconds ?: 0 }
     }
 
     suspend fun addComment(postId: String, postOwner: String, text: String): Comment {
         val uid = uid()
-        val c = Comment(post_id = postId, user_id = uid, content = text)
+        val c = Comment(
+            post_id = postId, user_id = uid, content = text,
+            created_at = com.google.firebase.Timestamp.now()
+        )
         val ref = comments.add(c).await()
         if (postOwner != uid) createNotif(postOwner, "comment", postId, "commented on your post")
         return c.copy(id = ref.id)

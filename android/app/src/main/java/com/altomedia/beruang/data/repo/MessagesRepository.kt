@@ -20,10 +20,10 @@ class MessagesRepository @Inject constructor(
 
     // ---- 1:1 ----
     suspend fun conversationList(): List<ConversationSummary> {
-        val sent = messages.whereEqualTo("sender_id", uid())
-            .orderBy("created_at", Query.Direction.DESCENDING).limit(200).get().await()
-        val recv = messages.whereEqualTo("receiver_id", uid())
-            .orderBy("created_at", Query.Direction.DESCENDING).limit(200).get().await()
+        // Avoid orderBy on created_at combined with an equality filter — that
+        // needs a composite index. Fetch plain and sort in memory.
+        val sent = messages.whereEqualTo("sender_id", uid()).limit(200).get().await()
+        val recv = messages.whereEqualTo("receiver_id", uid()).limit(200).get().await()
         val all = (sent.documents + recv.documents)
             .mapNotNull { it.toObject(Message::class.java)?.copy(id = it.id) }
             .sortedByDescending { it.created_at?.seconds ?: 0 }
@@ -40,10 +40,10 @@ class MessagesRepository @Inject constructor(
     }
 
     suspend fun threadWith(partner: String): List<Message> {
-        val sent = messages.whereEqualTo("sender_id", uid()).whereEqualTo("receiver_id", partner)
-            .orderBy("created_at", Query.Direction.ASCENDING).limit(200).get().await()
-        val recv = messages.whereEqualTo("sender_id", partner).whereEqualTo("receiver_id", uid())
-            .orderBy("created_at", Query.Direction.ASCENDING).limit(200).get().await()
+        // Two equality filters + orderBy would need a composite index; fetch
+        // both halves plain and merge/sort in memory.
+        val sent = messages.whereEqualTo("sender_id", uid()).whereEqualTo("receiver_id", partner).limit(200).get().await()
+        val recv = messages.whereEqualTo("sender_id", partner).whereEqualTo("receiver_id", uid()).limit(200).get().await()
         val all = (sent.documents + recv.documents)
             .mapNotNull { it.toObject(Message::class.java)?.copy(id = it.id) }
             .sortedBy { it.created_at?.seconds ?: 0 }
@@ -58,19 +58,32 @@ class MessagesRepository @Inject constructor(
     }
 
     suspend fun send(to: String, text: String, feedRepo: FeedRepository) {
-        val m = Message(sender_id = uid(), receiver_id = to, content = text)
+        // Set created_at on the client so the message is present in cache and
+        // sorts correctly without relying on @ServerTimestamp resolving.
+        val m = Message(
+            sender_id = uid(), receiver_id = to, content = text,
+            created_at = com.google.firebase.Timestamp.now()
+        )
         messages.add(m).await()
         feedRepo.createNotif(to, "message", null, "sent you a message")
     }
 
     // ---- global ----
     suspend fun globalMessages(): List<GlobalMessage> {
-        val snap = global.orderBy("created_at", Query.Direction.ASCENDING).limit(200).get().await()
+        val snap = try {
+            global.orderBy("created_at", Query.Direction.ASCENDING).limit(200).get().await()
+        } catch (e: Exception) {
+            global.limit(200).get().await()
+        }
         return snap.documents.mapNotNull { it.toObject(GlobalMessage::class.java)?.copy(id = it.id) }
+            .sortedBy { it.created_at?.seconds ?: 0 }
     }
 
     suspend fun sendGlobal(text: String) {
-        global.add(GlobalMessage(user_id = uid(), content = text)).await()
+        global.add(GlobalMessage(
+            user_id = uid(), content = text,
+            created_at = com.google.firebase.Timestamp.now()
+        )).await()
     }
 }
 

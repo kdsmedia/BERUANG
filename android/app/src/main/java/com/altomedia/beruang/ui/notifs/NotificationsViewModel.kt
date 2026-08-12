@@ -30,12 +30,16 @@ class NotificationsViewModel @Inject constructor(
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true)
-        val list = repo.list()
-        val ids = list.mapNotNull { it.from_user_id }.distinct()
-        val map = ids.map { it to profiles.get(it) }.toMap()
-        _state.value = NotifsUiState(list, map, loading = false)
+        try {
+            val list = runCatching { repo.list() }.getOrDefault(emptyList())
+            val ids = list.mapNotNull { it.from_user_id }.distinct()
+            val map = ids.mapNotNull { runCatching { it to profiles.get(it) }.getOrNull() }.toMap()
+            _state.value = NotifsUiState(list, map, loading = false)
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(loading = false)
+        }
     }
 
-    fun markRead(id: String) = viewModelScope.launch { repo.markRead(id); refresh() }
-    fun markAll() = viewModelScope.launch { repo.markAllRead(); refresh() }
+    fun markRead(id: String) = viewModelScope.launch { runCatching { repo.markRead(id) }; refresh() }
+    fun markAll() = viewModelScope.launch { runCatching { repo.markAllRead() }; refresh() }
 }

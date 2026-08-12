@@ -36,20 +36,33 @@ class FriendsViewModel @Inject constructor(
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true)
-        val fs = friends.state()
-        val acceptedP = fs.accepted.map { profiles.get(it) }
-        val pendingInP = fs.pendingIn.map { profiles.get(it.user_id) }
-        val all = profiles.list(60)
-        val excluded = fs.accepted + fs.pendingOut + fs.pendingIncomingIds()
-        val suggested = all.filter { it.id !in excluded }
-        _state.value = FriendsUiState(fs, acceptedP, suggested, pendingInP, loading = false)
+        try {
+            val fs = runCatching { friends.state() }.getOrDefault(
+                com.altomedia.beruang.data.repo.FriendState(emptySet(), emptyList(), emptySet())
+            )
+            val acceptedP = fs.accepted.mapNotNull { runCatching { profiles.get(it) }.getOrNull() }
+            val pendingInP = fs.pendingIn.mapNotNull { runCatching { profiles.get(it.user_id) }.getOrNull() }
+            val all = runCatching { profiles.list(60) }.getOrDefault(emptyList())
+            val excluded = fs.accepted + fs.pendingOut + fs.pendingIncomingIds()
+            val suggested = all.filter { it.id !in excluded && it.id != profiles.currentUid }
+            _state.value = FriendsUiState(fs, acceptedP, suggested, pendingInP, loading = false)
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(loading = false, toast = "Gagal memuat teman")
+        }
     }
 
     fun send(uid: String) = viewModelScope.launch {
-        friends.sendRequest(uid, feed); _state.value = _state.value.copy(toast = "Request sent"); refresh()
+        runCatching { friends.sendRequest(uid, feed) }
+            .onSuccess { _state.value = _state.value.copy(toast = "Request sent") }
+            .onFailure { _state.value = _state.value.copy(toast = "Gagal mengirim permintaan") }
+        refresh()
     }
-    fun accept(f: Friendship) = viewModelScope.launch { friends.accept(f, feed); refresh() }
-    fun decline(f: Friendship) = viewModelScope.launch { friends.decline(f); refresh() }
-    fun remove(uid: String) = viewModelScope.launch { friends.remove(uid); _state.value = _state.value.copy(toast = "Removed"); refresh() }
+    fun accept(f: Friendship) = viewModelScope.launch { runCatching { friends.accept(f, feed) }; refresh() }
+    fun decline(f: Friendship) = viewModelScope.launch { runCatching { friends.decline(f) }; refresh() }
+    fun remove(uid: String) = viewModelScope.launch {
+        runCatching { friends.remove(uid) }
+            .onSuccess { _state.value = _state.value.copy(toast = "Removed") }
+        refresh()
+    }
     fun toastShown() { _state.value = _state.value.copy(toast = null) }
 }

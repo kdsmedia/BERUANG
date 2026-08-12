@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.ui.components.EmojiPickerSheet
 import com.altomedia.beruang.ui.components.EmptyState
 import com.altomedia.beruang.ui.components.FeelingPickerSheet
+import com.altomedia.beruang.ui.components.PullToRefreshLayout
 import com.altomedia.beruang.ui.components.clickableNoRipple
 import com.altomedia.beruang.ui.components.outlinedFieldColors
 import com.altomedia.beruang.ui.feed.PostCard
@@ -62,7 +63,12 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
         snackbarHost = { SnackbarHost(snackbarHost) },
         containerColor = Bg
     ) { p ->
-        LazyColumn(Modifier.fillMaxSize().padding(p)) {
+        PullToRefreshLayout(
+            isRefreshing = loading,
+            onRefresh = { vm.refresh() },
+            modifier = Modifier.fillMaxSize().padding(p)
+        ) {
+            LazyColumn(Modifier.fillMaxSize()) {
             // Composer
             item {
                 Composer(
@@ -109,6 +115,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
                         onDeletePost = { vm.deletePost(item.post) }
                     )
                 }
+            }
             }
         }
     }

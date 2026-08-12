@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.ui.components.Avatar
 import com.altomedia.beruang.ui.components.EmptyState
+import com.altomedia.beruang.ui.components.PullToRefreshLayout
 import com.altomedia.beruang.ui.components.relTime
 import com.altomedia.beruang.ui.theme.*
 
@@ -56,6 +57,7 @@ fun NotificationsScreen(openProfile: (String) -> Unit, vm: NotificationsViewMode
             if (s.loading) EmptyState("⏳", "Loading…")
             else if (s.items.isEmpty()) EmptyState("🔔", "No notifications yet.")
             else {
+                PullToRefreshLayout(isRefreshing = false, onRefresh = { vm.refresh() }, modifier = Modifier.weight(1f)) {
                 LazyColumn {
                     items(s.items) { n ->
                         val p = n.from_user_id?.let { s.fromProfiles[it] }
@@ -82,6 +84,7 @@ fun NotificationsScreen(openProfile: (String) -> Unit, vm: NotificationsViewMode
                         }
                         HorizontalDivider(color = Line.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 72.dp))
                     }
+                }
                 }
             }
         }

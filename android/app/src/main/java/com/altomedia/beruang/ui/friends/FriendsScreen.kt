@@ -66,7 +66,7 @@ fun FriendsScreen(
                 if (s.pendingInProfiles.isNotEmpty()) {
                     item { SectionTitle("Friend Requests") }
                     items(s.pendingInProfiles) { p ->
-                        val f = s.state.pendingIn.first { it.user_id == p.id }
+                        val f = s.state.pendingIn.firstOrNull { it.user_id == p.id } ?: return@items
                         FriendRow(p, "wants to be your friend", accept = { vm.accept(f) }, decline = { vm.decline(f) })
                     }
                 }

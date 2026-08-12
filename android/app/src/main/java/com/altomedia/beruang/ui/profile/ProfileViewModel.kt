@@ -38,7 +38,8 @@ class ProfileViewModel @Inject constructor(
         loadedUid = uid
         _state.value = _state.value.copy(loading = true, toast = null)
         try {
-            val p = profiles.get(uid)
+            val p = runCatching { profiles.get(uid) }.getOrNull()
+                ?: Profile(id = uid, full_name = "User", avatar_url = Profile.dicebearAvatar(uid))
             val posts = runCatching { feed.postsByUser(uid) }.getOrDefault(emptyList())
             val fs = runCatching { friends.state() }.getOrDefault(
                 com.altomedia.beruang.data.repo.FriendState(emptySet(), emptyList(), emptySet())
@@ -55,7 +56,9 @@ class ProfileViewModel @Inject constructor(
         try {
             profiles.update(name, bio, avatarPreset)
             _state.value = _state.value.copy(toast = "Profil diperbarui")
-            loadedUid?.let { load(it) }
+            // Force a reload so the new name/bio/avatar show immediately.
+            loadedUid = null
+            profiles.currentUid?.let { load(it) }
         } catch (e: Exception) { _state.value = _state.value.copy(toast = "Update failed: ${e.message}") }
     }
 

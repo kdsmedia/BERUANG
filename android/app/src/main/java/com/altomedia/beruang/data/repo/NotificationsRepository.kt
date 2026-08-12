@@ -17,9 +17,11 @@ class NotificationsRepository @Inject constructor(
     private fun uid() = auth.currentUser?.uid ?: throw IllegalStateException("Not signed in")
 
     suspend fun list(): List<Notification> {
-        val snap = notifs.whereEqualTo("user_id", uid())
-            .orderBy("created_at", Query.Direction.DESCENDING).limit(80).get().await()
+        // whereEqualTo("user_id") + orderBy("created_at") needs a composite
+        // index; fetch plain and sort in memory so notifications always load.
+        val snap = notifs.whereEqualTo("user_id", uid()).limit(80).get().await()
         return snap.documents.mapNotNull { it.toObject(Notification::class.java)?.copy(id = it.id) }
+            .sortedByDescending { it.created_at?.seconds ?: 0 }
     }
 
     suspend fun unreadCount(): Int {

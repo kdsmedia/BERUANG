@@ -27,17 +27,24 @@ class GroupsViewModel @Inject constructor(private val repo: GroupsRepository) : 
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true)
-        val groups = repo.allGroups()
-        val mine = repo.myMemberships().map { it.group_id }.toSet()
-        _state.value = GroupsUiState(groups, mine, loading = false)
+        try {
+            val groups = runCatching { repo.allGroups() }.getOrDefault(emptyList())
+            val mine = runCatching { repo.myMemberships() }.getOrDefault(emptyList()).map { it.group_id }.toSet()
+            _state.value = GroupsUiState(groups, mine, loading = false)
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(loading = false, toast = "Gagal memuat grup")
+        }
     }
 
     fun create(name: String, desc: String?) = viewModelScope.launch {
         if (name.isBlank()) return@launch
-        repo.create(name, desc); _state.value = _state.value.copy(toast = "Group created"); refresh()
+        runCatching { repo.create(name, desc) }
+            .onSuccess { _state.value = _state.value.copy(toast = "Group created") }
+            .onFailure { _state.value = _state.value.copy(toast = "Gagal membuat grup") }
+        refresh()
     }
 
-    fun join(id: String) = viewModelScope.launch { repo.join(id); refresh() }
-    fun leave(id: String) = viewModelScope.launch { repo.leave(id); refresh() }
+    fun join(id: String) = viewModelScope.launch { runCatching { repo.join(id) }; refresh() }
+    fun leave(id: String) = viewModelScope.launch { runCatching { repo.leave(id) }; refresh() }
     fun toastShown() { _state.value = _state.value.copy(toast = null) }
 }
