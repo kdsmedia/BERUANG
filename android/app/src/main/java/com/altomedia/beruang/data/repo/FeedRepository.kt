@@ -25,8 +25,16 @@ class FeedRepository @Inject constructor(
 
     // ---------- posts ----------
     suspend fun feed(limit: Long = 50): List<Post> {
-        val snap = posts.orderBy("created_at", Query.Direction.DESCENDING).limit(limit).get().await()
+        // Prefer orderBy("created_at") for an already-sorted feed; if the
+        // single-field index is unavailable this throws, so fall back to a
+        // plain get() sorted in memory so the feed never appears empty.
+        val snap = try {
+            posts.orderBy("created_at", Query.Direction.DESCENDING).limit(limit).get().await()
+        } catch (e: Exception) {
+            posts.limit(limit).get().await()
+        }
         return snap.documents.mapNotNull { it.toObject(Post::class.java)?.copy(id = it.id) }
+            .sortedByDescending { it.created_at?.seconds ?: 0 }
     }
 
     suspend fun postsByUser(userId: String): List<Post> {
@@ -42,9 +50,14 @@ class FeedRepository @Inject constructor(
     /** Text-only post (photo/video/location features removed). */
     suspend fun createPost(content: String?): String {
         val uid = uid()
+        // Set created_at on the client so the doc is immediately present in the
+        // cache and indexed for the orderBy("created_at") feed query — relying
+        // on @ServerTimestamp leaves it null locally until the server round-trip,
+        // which can cause freshly posted posts to be missing from the feed.
         val post = Post(
             user_id = uid,
-            content = content?.ifBlank { null }
+            content = content?.ifBlank { null },
+            created_at = com.google.firebase.Timestamp.now()
         )
         val ref = posts.add(post).await()
         return ref.id

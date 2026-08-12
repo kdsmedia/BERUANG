@@ -57,15 +57,16 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadFeed() {
-        val posts = feed.feed()
+        val posts = try { feed.feed() } catch (e: Exception) { return }
         val fetchedIds = posts.map { it.id }.toHashSet()
         val ids = posts.map { it.user_id }.distinct()
-        val byId = ids.map { it to profiles.get(it) }.toMap()
-        val likeMap = feed.likesForPosts(posts.map { it.id })
+        val byId = ids.mapNotNull { uid -> runCatching { uid to profiles.get(uid) }.getOrNull() }.toMap()
+        val likeMap = runCatching { feed.likesForPosts(posts.map { it.id }) }.getOrDefault(emptyMap())
         val uid = profiles.currentUid
-        val fetched = posts.map { p ->
+        val fetched = posts.mapNotNull { p ->
+            val author = byId[p.user_id] ?: Profile(id = p.user_id, full_name = "User", avatar_url = Profile.dicebearAvatar(p.user_id))
             val likes = likeMap[p.id] ?: emptyList()
-            FeedItem(p, byId[p.user_id]!!, likes.size, likes.any { it.user_id == uid })
+            FeedItem(p, author, likes.size, likes.any { it.user_id == uid })
         }
         // Keep optimistic/local posts that the server query hasn't returned yet
         // (e.g. a just-created post whose server timestamp isn't indexed) so
@@ -77,25 +78,33 @@ class HomeViewModel @Inject constructor(
     fun createPost(content: String) = viewModelScope.launch {
         val text = content.trim()
         if (text.isEmpty()) { _toast.value = "Tulis sesuatu dulu"; return@launch }
+        val uid = profiles.currentUid
+        // Optimistically prepend FIRST so the post shows instantly even if the
+        // subsequent server write/query lags or fails.
+        val me = profiles.myProfile() ?: uid?.let { Profile(id = it, full_name = "Me", avatar_url = Profile.dicebearAvatar(it)) }
+        if (me != null) {
+            val optimisticPost = Post(
+                id = "local-${System.currentTimeMillis()}",
+                user_id = me.id,
+                content = text,
+                created_at = com.google.firebase.Timestamp.now()
+            )
+            _items.value = listOf(FeedItem(optimisticPost, me, 0, false)) + _items.value
+        }
         try {
             val newId = feed.createPost(text)
-            // Optimistically prepend so the post shows instantly in the feed.
-            // (A fresh Firestore orderBy("created_at") re-query right after a
-            // server-timestamp write can miss the new doc until it's indexed.)
-            val uid = profiles.currentUid
-            val me = uid?.let { runCatching { profiles.get(it) }.getOrNull() }
-            if (me != null) {
-                val post = Post(
-                    id = newId,
-                    user_id = me.id,
-                    content = text,
-                    created_at = com.google.firebase.Timestamp.now()
-                )
-                _items.value = listOf(FeedItem(post, me, 0, false)) + _items.value
+            // Replace the optimistic placeholder with the real server id so it
+            // persists across refreshes (merge keeps posts not returned by server).
+            _items.value = _items.value.map {
+                if (it.post.id.startsWith("local-")) it.copy(post = it.post.copy(id = newId)) else it
             }
             _toast.value = "Posted"
             refresh()
-        } catch (e: Exception) { _toast.value = "Post failed: ${e.message}" }
+        } catch (e: Exception) {
+            _toast.value = "Post failed: ${e.message}"
+            // Remove the optimistic post if the write actually failed.
+            _items.value = _items.value.filterNot { it.post.id.startsWith("local-") }
+        }
     }
 
     fun toggleLike(item: FeedItem) = viewModelScope.launch {
