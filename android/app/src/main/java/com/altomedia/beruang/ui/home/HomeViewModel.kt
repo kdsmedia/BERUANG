@@ -58,19 +58,41 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun loadFeed() {
         val posts = feed.feed()
+        val fetchedIds = posts.map { it.id }.toHashSet()
         val ids = posts.map { it.user_id }.distinct()
         val byId = ids.map { it to profiles.get(it) }.toMap()
         val likeMap = feed.likesForPosts(posts.map { it.id })
         val uid = profiles.currentUid
-        _items.value = posts.map { p ->
+        val fetched = posts.map { p ->
             val likes = likeMap[p.id] ?: emptyList()
             FeedItem(p, byId[p.user_id]!!, likes.size, likes.any { it.user_id == uid })
         }
+        // Keep optimistic/local posts that the server query hasn't returned yet
+        // (e.g. a just-created post whose server timestamp isn't indexed) so
+        // they don't vanish on refresh.
+        val localOnly = _items.value.filter { it.post.id !in fetchedIds }
+        _items.value = localOnly + fetched
     }
 
     fun createPost(content: String) = viewModelScope.launch {
+        val text = content.trim()
+        if (text.isEmpty()) { _toast.value = "Tulis sesuatu dulu"; return@launch }
         try {
-            feed.createPost(content)
+            val newId = feed.createPost(text)
+            // Optimistically prepend so the post shows instantly in the feed.
+            // (A fresh Firestore orderBy("created_at") re-query right after a
+            // server-timestamp write can miss the new doc until it's indexed.)
+            val uid = profiles.currentUid
+            val me = uid?.let { runCatching { profiles.get(it) }.getOrNull() }
+            if (me != null) {
+                val post = Post(
+                    id = newId,
+                    user_id = me.id,
+                    content = text,
+                    created_at = com.google.firebase.Timestamp.now()
+                )
+                _items.value = listOf(FeedItem(post, me, 0, false)) + _items.value
+            }
             _toast.value = "Posted"
             refresh()
         } catch (e: Exception) { _toast.value = "Post failed: ${e.message}" }

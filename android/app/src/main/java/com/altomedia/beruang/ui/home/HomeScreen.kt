@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Mood
 import androidx.compose.material.icons.outlined.SentimentSatisfied
 import androidx.compose.material3.*
@@ -35,13 +36,16 @@ import com.altomedia.beruang.ui.theme.*
 import com.altomedia.beruang.util.Feeling
 
 @Composable
-fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
     val items by vm.items.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val toast by vm.toast.collectAsStateWithLifecycle()
     val comments by vm.comments.collectAsStateWithLifecycle()
     val commentProfiles by vm.commentProfiles.collectAsStateWithLifecycle()
     val expanded by vm.expandedComments.collectAsStateWithLifecycle()
+
+    val badgesVm: com.altomedia.beruang.ui.notifs.BadgesViewModel = hiltViewModel()
+    val notifUnread by badgesVm.notifUnread.collectAsStateWithLifecycle()
 
     var composerText by remember { mutableStateOf("") }
     var feeling by remember { mutableStateOf<Feeling?>(null) }
@@ -54,7 +58,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
     LaunchedEffect(toast) { toast?.let { snackbarHost.showSnackbar(it); vm.toastShown() } }
 
     Scaffold(
-        topBar = { HomeTopBar() },
+        topBar = { HomeTopBar(notifUnread = notifUnread, onAlerts = onAlerts) },
         snackbarHost = { SnackbarHost(snackbarHost) },
         containerColor = Bg
     ) { p ->
@@ -114,7 +118,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun HomeTopBar() {
+private fun HomeTopBar(notifUnread: Int, onAlerts: () -> Unit) {
     Surface(color = Surface, shadowElevation = 0.dp) {
         Column {
             Row(
@@ -126,9 +130,18 @@ private fun HomeTopBar() {
                     Text("ANG", color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.weight(1f))
-                Icon(Icons.Filled.Favorite, contentDescription = "activity", tint = Text, modifier = Modifier.size(26.dp).clickableNoRipple { })
-                Spacer(Modifier.width(18.dp))
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "messages", tint = Text, modifier = Modifier.size(26.dp).clickableNoRipple { })
+                Box(contentAlignment = Alignment.TopEnd) {
+                    IconButton(onClick = onAlerts) {
+                        Icon(Icons.Filled.Notifications, contentDescription = "alerts", tint = Text, modifier = Modifier.size(26.dp))
+                    }
+                    if (notifUnread > 0) {
+                        Box(
+                            Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp)
+                                .size(16.dp).clip(CircleShape).background(Danger),
+                            contentAlignment = Alignment.Center
+                        ) { Text(if (notifUnread > 99) "99+" else notifUnread.toString(), fontSize = 9.sp, color = Surface, fontWeight = FontWeight.Bold) }
+                    }
+                }
             }
             HorizontalDivider(color = Line, thickness = 0.5.dp)
         }

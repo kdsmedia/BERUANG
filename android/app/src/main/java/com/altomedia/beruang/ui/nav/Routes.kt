@@ -18,7 +18,6 @@ enum class Tab(val route: String, val label: String, val icon: ImageVector, val 
     Friends("friends", "Friends", Icons.Outlined.Group, Icons.Filled.Group),
     Messages("messages", "Messages", Icons.AutoMirrored.Outlined.Comment, Icons.AutoMirrored.Filled.Comment),
     Groups("groups", "Groups", Icons.Outlined.Group, Icons.Filled.Group),
-    Alerts("notifs", "Alerts", Icons.Outlined.Notifications, Icons.Filled.Notifications),
     Me("profile", "Me", Icons.Outlined.Person, Icons.Filled.Person)
 }
 

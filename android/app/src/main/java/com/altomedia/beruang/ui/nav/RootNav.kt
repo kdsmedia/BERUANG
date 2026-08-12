@@ -51,7 +51,7 @@ fun RootNav() {
     ) { padding ->
         Box(Modifier.padding(padding)) {
             NavHost(nav, startDestination = Routes.Home) {
-                composable(Routes.Home) { HomeScreen() }
+                composable(Routes.Home) { HomeScreen(onAlerts = { nav.navigate(Routes.Notifs) }) }
                 composable(Routes.Friends) { FriendsScreen(openChat = { uid -> nav.navigate(Routes.chat(uid)) }, openProfile = { uid -> nav.navigate(Routes.profileView(uid)) }) }
                 composable(Routes.Messages) { MessagesScreen(openChat = { uid -> nav.navigate(Routes.chat(uid)) }) }
                 composable(Routes.Groups) { GroupsScreen() }
@@ -121,11 +121,6 @@ private fun NavigationIcon(tab: Tab, selected: Boolean, onNavigate: (String) -> 
         if (tab == Tab.Messages) {
             val vm = androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.notifs.BadgesViewModel>()
             val count by vm.msgUnread.collectAsState()
-            BadgeDot(count)
-        }
-        if (tab == Tab.Alerts) {
-            val vm = androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.notifs.BadgesViewModel>()
-            val count by vm.notifUnread.collectAsState()
             BadgeDot(count)
         }
     }
