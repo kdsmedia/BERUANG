@@ -5,17 +5,20 @@ Native Android social app (Jetpack Compose + Firebase). The repo is Android-only
 ## Android app (`android/`)
 - Package: `com.altomedia.beruang`; Firebase project `altomedia-indonesia` (Storage bucket `altomedia-indonesia.firebasestorage.app`).
 - `google-services.json` is committed under `android/app/`.
-- Stack: Kotlin 1.9.24, AGP 8.5.2, Gradle 8.7, Hilt 2.51.1, KSP 1.9.24-1.0.20, Compose + material-icons-extended, Firebase (Auth/Firestore/Storage), Coil, navigation-compose, lifecycle-viewmodel-compose.
+- Stack: Kotlin 1.9.24, AGP 8.10.1, Gradle 8.11.1, Hilt 2.51.1, KSP 1.9.24-1.0.20, Compose + material-icons-extended, Firebase (Auth/Firestore/Storage), Coil, navigation-compose, lifecycle-viewmodel-compose. compileSdk/targetSdk 37, minSdk 21, versionCode 4, versionName 1.2.0.
 - Firebase security rules: `android/app/firestore.rules` and `android/app/storage.rules` (users read/write own rows; posts/likes/comments/stories/global_messages/groups are public-read; notifications readable by owner; friendships bilateral; wallets readable, wallets.update open to any signed-in user for P2P transfer; transactions readable by sender/recipient). Deploy via `firebase deploy --only firestore:rules,storage`.
-- Build env: `ANDROID_HOME=/opt/android-sdk` (platform-34, build-tools, platform-tools), `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` (JDK 21). `local.properties` points `sdk.dir` at the SDK.
+- Build env: `ANDROID_HOME` set to an Android SDK with `platforms;android-37.0`, `build-tools;37.0.0`, `platform-tools`; `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` (JDK 21). `local.properties` points `sdk.dir` at the SDK.
+- Release signing: `ALTOMEDIA.jks` (alias `kdsmedia`, password `Kdsmedia@123`), located at `ALTOMEDIA/keystore/`. Credentials read from `android/keystore.properties` (gitignored). DN: `CN=ALTOMEDIA, OU=Developer, O=ALTOMEDIA, L=Karawang, ST=Jawa Barat, C=ID`, validity 10000 days.
 
 ### Build
 ```
 cd android
-export ANDROID_HOME=/opt/android-sdk JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-./gradlew :app:assembleDebug --no-daemon
+export ANDROID_HOME=<sdk> JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+./gradlew :app:assembleDebug --no-daemon          # debug APK
+./gradlew :app:assembleRelease :app:bundleRelease --no-daemon  # signed release APK + AAB
 ```
-- APK output: `android/app/build/outputs/apk/debug/app-debug.apk` (~22 MB).
+- All three variants build with zero errors (only minor deprecation/unused-param warnings). `:app:lintDebug` passes with no errors.
+- Outputs: `android/app/build/outputs/apk/debug/app-debug.apk`, `.../apk/release/app-release.apk`, `.../bundle/release/app-release.aab`. Release artifacts are signed with the ALTOMEDIA keystore.
 
 ### Firestore collections
 `profiles`, `posts`, `likes`, `comments`, `stories`, `messages`, `global_messages`, `friendships`, `groups`, `group_members`, `notifications`, `wallets`, `transactions`.
@@ -24,7 +27,7 @@ export ANDROID_HOME=/opt/android-sdk JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd6
 - `profiles` carries `points` (snapshot), `account_id` (unique 6-digit), `points_pin` (SHA-256 hex of `beruang:<pin>`), `phone`, `email`, `gender` ('male'|'female'|'other'). `wallets(user_id, balance)` is the source of truth for the balance.
 - Rewards (via `AccountsRepository.awardPoints`, called from `FeedRepository`/`FriendsRepository`): post +20, comment +50, friend accepted +10 (both users).
 - Rank tiers (`RankTiers.kt`): Start(0)/Bronze(100)/Silver(500)/Gold(2000)/Master(10000) with badge drawables under `res/drawable/`.
-- QR encodes the `account_id`; scan (`QrScannerScreen`) + amount + 4-digit PIN (`TransferDialog`) → `AccountsRepository.transfer` (validates PIN + balance, debits/credits wallets, records `transactions`).
+- QR encodes the `account_id`; scan (`QrScannerScreen`, fires once on main thread via AtomicBoolean guard) + amount + 4-digit PIN (`TransferDialog`) → `AccountsRepository.transfer` (validates PIN + balance, then debits sender + credits recipient + records `transactions` atomically in a single `Firestore.runBatch`).
 - Known trade-off (flagged, not silently fixed): `wallets.update` is open to any signed-in user so a P2P transfer can credit the recipient from the sender's client. For full security move the debit/credit into a Cloud Function.
 
 ### Auth = phone-number login, no OTP
