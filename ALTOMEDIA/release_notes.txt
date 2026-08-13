@@ -1,26 +1,43 @@
-BERUANG 1.0.0 — Rilis Awal
+BERUANG 1.2.0 — Dompet Poin & Stabilitas
 
-Selamat datang di BERUANG, sosial media khas Indonesia!
+Terima kasih telah memakai BERUANG! Rilis 1.2.0 menambahkan sistem poin virtual
+yang lengkap serta sejumlah perbaikan bug dan peningkatan keamanan.
 
-FITUR BARU (1.0.0):
-• Login dengan nomor telepon (format 08xxxxxxxx) — tanpa OTP, cukup kata sandi.
-• Feed beranda dengan story, composer posting (teks, foto, video, perasaan, lokasi), dan tab filter (For You / Friends / Groups / Trending).
-• Kartu postingan: like, komentar (dengan hapus komentar sendiri), menu titik-tiga (hapus/simpan), highlight hashtag.
-• Pertemanan: cari teman, permintaan masuk (terima/tolak), daftar teman (hapus), saran teman (tambah).
-• Pesan: chat privat 1:1 + chat global publik, bubble pesan, auto-tandai-sudah-dibaca.
-• Grup: buat grup (nama + deskripsi), gabung/keluar, daftar "Grup Saya" dan "Discover".
-• Notifikasi terpadu: suka, komentar, permintaan teman, pesan — dengan badge unread & "tandai semua dibaca".
-• Profil: banner sampul, avatar, bio, tab Posts/About/Friends, edit profil dengan pratinjau avatar langsung.
-• Emoji picker terkategori (Smileys, Gestures, Hearts, Animals, Food, Travel, Activities).
-• Keamanan: escaping HTML untuk cegah XSS, Row Level Security pada Firestore & Storage.
+FITUR BARU (1.2.0):
+• Sistem Poin Virtual — dapat poin dari aktivitas: postingan (+20), komentar (+50),
+  menambah teman (+10). Saldo terlihat di halaman profil.
+• Dompet & QR — setiap akun punya account_id unik yang ditampilkan sebagai QR code;
+  pengguna lain dapat memindai QR untuk transfer poin.
+• Transfer Poin dengan PIN — transfer antar pengguna dilindungi PIN transaksi 4 digit
+  (disimpan sebagai hash). Transfer bersifat atomik agar saldo selalu konsisten.
+• Tier Peringkat — lencana tier otomatis (Perunggu, Perak, Emas, Platina) berdasarkan
+  total poin, ditampilkan di profil.
+• Edit Profil diperluas — field tambahan (telepon, email, jenis kelamin) kini dapat
+  diatur dan disimpan ke profil.
+• Berbagi Postingan — tombol Share kini membuka share sheet Android asli (ACTION_SEND).
 
-PERBAIKAN & STABILITAS:
-• Audit kode: tidak ada data dummy/simulasi, tidak ada TODO/FIXME yang tersisa.
-• Wiring badge jumlah permintaan teman ke BadgesViewModel (sebelumnya dead code).
-• Penghapusan dead toast code pada MessagesViewModel.
+PERBAIKAN BUG (1.2.0):
+• BadgesViewModel kini menangani error Firestore (jaringan/izin) dengan aman — tidak
+  lagi crash saat membuka aplikasi.
+• Logout kini membersihkan cache profil + sesi agar data tidak bocor antar akun.
+• Pemindai QR hanya memicu hasil sekali dan di thread utama (mencegah navigasi ganda
+  dan crash state Compose).
+• Filter tab beranda yang tidak berfungsi (For You/Friends/Groups/Trending) dihapus
+  agar tidak ada UI palsu.
+• Tombol Save/bookmark semu (ephemeral, tidak tersimpan) dihapus.
 
-CATATAN:
+RIWAYAT VERSI SEBELUMNYA:
+• 1.1.0 — Perbaikan bug wallet/transfer: guard self-transfer yang mati, state
+  transferring di ProfileViewModel, spinner flow di ProfileScreen, hapus dead code
+  Routes.QrScanner.
+• 1.0.0 — Rilis awal: login nomor telepon (tanpa OTP), feed beranda & story,
+  pertemanan, pesan privat & global, grup, notifikasi terpadu, profil & emoji picker.
+
+TEKNIS:
 • Memerlukan Android 5.0 (API 21) ke atas.
-• Dibangun untuk target SDK 37.
+• compileSdk/targetSdk 37, versionCode 4.
+• Ditandatangani dengan keystore ALTOMEDIA (CN=ALTOMEDIA, O=ALTOMEDIA,
+  L=Karawang, ST=Jawa Barat, C=ID).
 
-Terima kasih telah menjadi pengguna awal BERUANG. Saran & laporan bug: legal@altomedia.id
+Saran & laporan bug: altomediaindonesia@gmail.com
+

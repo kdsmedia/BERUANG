@@ -41,11 +41,14 @@ Pasang banner sampul, avatar, dan bio. Tampilkan postinganmu, info "Tentang", da
 Pilih emoji dari kategori: Smileys, Gestures, Hearts, Animals, Food, Travel, Activities. Sisipkan di postingan atau di pesan dengan cepat.
 
 PRIVASI & KEAMANAN
-Kami menjaga data Anda. Teks yang Anda lihat di-escape untuk mencegah XSS. Data disimpan dengan Row Level Security di Firebase, sehingga hanya pemilik yang dapat menulis/menghapus kontennya sendiri. Login menggunakan Firebase Authentication dengan kata sandi yang di-hash.
+Kami menjaga data Anda. Teks yang Anda lihat di-escape untuk mencegah XSS. Data disimpan dengan Row Level Security di Firebase, sehingga hanya pemilik yang dapat menulis/menghapus kontennya sendiri. Login menggunakan Firebase Authentication dengan kata sandi yang di-hash. PIN transaksi poin disimpan sebagai hash SHA-256, dan transfer poin dijalankan secara atomik.
+
+POIN & DOMPET VIRTUAL
+Setiap aktivitas memberi poin: postingan +20, komentar +50, menambah teman +10. Bagikan poin ke teman lewat pemindaian QR dengan PIN 4 digit. Tier peringkat (Perunggu → Platina) tampil di profil. Poin bersifat virtual, bukan mata uang riil.
 
 BERUANG gratis untuk digunakan. Cocok untuk remaja (13+) hingga dewasa yang ingin tetap terhubung dengan keluarga, teman, dan komunitas.
 
-Kontak: privacy@altomedia.id | legal@altomedia.id
+Kontak: altomediaindonesia@gmail.com
 Kebijakan Privasi: https://kdsmedia.github.io/BERUANG/privacy_policy.html
 Ketentuan Layanan: https://kdsmedia.github.io/BERUANG/terms_of_service.html
 
@@ -65,20 +68,23 @@ Phone screenshots (min 2, rekomendasi 4; JPEG/PNG, 16:9 or 9:16):
   → listing_assets/screenshot_2_1080x1920.png  (Pertemanan)
   → listing_assets/screenshot_3_1080x1920.png  (Pesan Langsung)
   → listing_assets/screenshot_4_1080x1920.png  (Grup Komunitas)
+  → listing_assets/screenshot_5_1080x1920.png  (Dompet Poin & Transfer QR)
 
 ==================================================
 DATA SAFETY — jawaban kuesioner
 ==================================================
 - Does your app collect or share personal data? YES
 - Data collected:
-  • Personal info: Phone number (login), Name (profile)
+  • Personal info: Phone number (login), Name (profile), optional email/gender
   • Photos and videos: User-uploaded posts/avatars
   • App activity: Post interactions, messages, friend actions
   • App info or performance: Crash info (jika analytics on)
+  • In-app virtual points balance & transaction history (NOT financial/payment data — points have no monetary value; transaction PIN stored as hash only)
 - Is data encrypted in transit? YES
 - Can users request data deletion? YES
 - Is data shared? YES (content visible to other users per feature)
 - Data used for: App functionality, Account management
+- Does the app collect payment/financial info? NO (points are virtual, no real-money transactions)
 
 ==================================================
 CONTENT RATING — jawaban kuesioner (kategori Social)

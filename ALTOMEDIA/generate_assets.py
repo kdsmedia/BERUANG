@@ -149,6 +149,29 @@ def mock_groups(d, W, H):
         d.ellipse([220, y + 105, 250, y + 135], fill=GREEN)
 
 
+def mock_wallet(d, W, H):
+    d.text((60, 330), "Dompet Poin", font=font(32, True), fill=DARK)
+    # Balance card
+    d.rounded_rectangle([40, 400, W - 40, 620], radius=28, fill=GREEN)
+    d.text((70, 440), "Saldo Poin", font=font(30), fill=YELLOW)
+    d.text((70, 485), "12.450", font=font(88, True), fill=WHITE)
+    d.text((70, 580), "Tier: BERUANG EMAS", font=font(26, True), fill=YELLOW)
+    # Actions
+    for i, label in enumerate(["Transfer Poin", "Pindai QR", "Riwayat Transaksi"]):
+        y = 670 + i * 120
+        d.rounded_rectangle([40, y, W - 40, y + 100], radius=20, fill=WHITE, outline=(225, 228, 225), width=2)
+        d.ellipse([60, y + 20, 120, y + 80], fill=YELLOW)
+        d.text((140, y + 32), label, font=font(30, True), fill=DARK)
+    # Recent transaction
+    d.text((60, 1050), "Transaksi Terbaru", font=font(30, True), fill=DARK)
+    for i in range(3):
+        y = 1110 + i * 90
+        d.ellipse([60, y, 110, y + 50], fill=GREEN)
+        d.text((130, y + 8), f"Transfer ke Teman {i+1}", font=font(26), fill=DARK)
+        d.text((130, y + 38), "2 jam lalu", font=font(22), fill=GREY)
+        d.text((W - 240, y + 14), f"-{(i+1)*50}", font=font(30, True), fill=(200, 60, 60))
+
+
 if __name__ == "__main__":
     make_icon()
     make_feature_graphic()
@@ -156,4 +179,5 @@ if __name__ == "__main__":
     make_screenshot(2, "Pertemanan", "Terima & tambah teman baru", mock_friends)
     make_screenshot(3, "Pesan Langsung", "Ngobrol privat & chat global", mock_chat)
     make_screenshot(4, "Grup Komunitas", "Bergabung & buat grup sendiri", mock_groups)
+    make_screenshot(0, "Dompet Poin", "Transfer poin lewat QR dengan aman", mock_wallet)
     print("Generated:", os.listdir(ASSETS))

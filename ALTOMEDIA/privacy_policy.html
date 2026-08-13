@@ -25,7 +25,7 @@
   <strong>Aplikasi:</strong> BERUANG — Sosial Media<br>
   <strong>Package:</strong> com.altomedia.beruang<br>
   <strong>Developer:</strong> Altomedia Indonesia<br>
-  <strong>Email:</strong> privacy@altomedia.id<br>
+  <strong>Email:</strong> altomediaindonesia@gmail.com<br>
   <strong>Tanggal efektif:</strong> 11 Agustus 2026<br>
   <strong>Versi dokumen:</strong> 1.0
 </div>
@@ -106,7 +106,17 @@
 </ul>
 <p>Tidak ada metode transmisi atau penyimpanan elektronik yang 100% aman. Walaupun demikian, kami berupaya melindungi data Anda menggunakan praktik industri yang lazim.</p>
 
-<h2>7. Hak Anda</h2>
+<h2>7. Data Poin &amp; Dompet Virtual</h2>
+<p>BERUANG menyediakan sistem poin virtual (bukan mata uang riil) yang diperoleh dari aktivitas pengguna dan dapat ditransfer antar pengguna. Berkaitan dengan fitur ini kami memproses data berikut:</p>
+<ul>
+  <li><strong>Saldo poin</strong> (numerik) tersimpan di koleksi <code>wallets</code> pada Firestore, terkait UID Anda.</li>
+  <li><strong>PIN transaksi</strong> 4 digit yang Anda buat, disimpan hanya dalam bentuk hash SHA-256 (tidak pernah sebagai teks biasa). PIN digunakan untuk meng otorisasi transfer poin.</li>
+  <li><strong>ID akun poin</strong> (<code>account_id</code>) yang ditampilkan dalam QR code agar pengguna lain dapat memindai untuk transfer.</li>
+  <li><strong>Riwayat transaksi</strong> (pengirim, penerima, nominal, waktu) di koleksi <code>transactions</code> untuk keperluan pencatatan dan transparansi.</li>
+</ul>
+<p>Poin <strong>tidak memiliki nilai moneter</strong>, tidak dapat ditukar dengan uang, dan bukan alat pembayaran. Data poin tidak dibagikan ke pihak ketiga mana pun. Transfer poin dilakukan secara atomik dalam satu operasi Firestore untuk menjaga konsistensi saldo. Anda dapat mengatur ulang PIN kapan saja melalui halaman profil.</p>
+
+<h2>8. Hak Anda</h2>
 <p>Berdasarkan peraturan perlindungan data pribadi yang berlaku (mis. UU PDP No. 27 Tahun 2022), Anda memiliki hak untuk:</p>
 <ul>
   <li>Mengakses data pribadi yang kami simpan tentang Anda.</li>
@@ -117,23 +127,23 @@
 </ul>
 <p>Untuk menggunakan hak ini, hubungi kami melalui email di bagian Kontak.</p>
 
-<h2>8. Privasi Anak</h2>
+<h2>9. Privasi Anak</h2>
 <p>Aplikasi tidak ditujukan untuk anak di bawah usia 13 tahun. Kami tidak dengan sengaja mengumpulkan data pribadi dari anak-anak. Jika Anda yakin anak Anda telah memberikan data kepada kami, hubungi kami agar kami dapat menghapusnya.</p>
 
-<h2>9. Tautan Eksternal</h2>
+<h2>10. Tautan Eksternal</h2>
 <p>Aplikasi dapat memuat tautan ke situs/layanan pihak ketiga (mis. link ke gambar avatar generik). Kami tidak bertanggung jawab atas praktik privasi situs tersebut. Mohon tinjau kebijakan privasi mereka.</p>
 
-<h2>10. Cookie &amp; Penyimpanan Lokal</h2>
+<h2>11. Cookie &amp; Penyimpanan Lokal</h2>
 <p>Aplikasi menggunakan penyimpanan lokal (DataStore/SharedPreferences) untuk menyimpan sesi login dan preferensi UI (mis. status login). Ini tidak mengandung data pribadi sensitif dan tetap berada di perangkat Anda.</p>
 
-<h2>11. Perubahan Kebijakan Ini</h2>
+<h2>12. Perubahan Kebijakan Ini</h2>
 <p>Kami dapat memperbarui Kebijakan Privasi ini sewaktu-waktu. Perubahan akan diumumkan dalam Aplikasi atau melalui kanal resmi. Tanggal efektif di atas menunjukkan revisi terbaru. Penggunaan Aplikasi setelah perubahan berarti Anda menyetujui versi yang baru.</p>
 
-<h2>12. Kontak</h2>
+<h2>13. Kontak</h2>
 <div class="contact">
   Untuk pertanyaan terkait privasi, penghapusan data, atau penggunaan hak Anda, hubungi:<br><br>
   <strong>Altomedia Indonesia</strong><br>
-  Email: <a href="mailto:privacy@altomedia.id">privacy@altomedia.id</a><br>
+  Email: <a href="mailto:altomediaindonesia@gmail.com">altomediaindonesia@gmail.com</a><br>
   Subjek: "BERUANG — Permintaan Privasi"
 </div>
 

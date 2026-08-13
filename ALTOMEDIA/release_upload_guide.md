@@ -4,7 +4,7 @@
 **Package:** com.altomedia.beruang
 **Project Firebase:** altomedia-indonesia
 **Storage bucket:** altomedia-indonesia.firebasestorage.app
-**VersionCode:** 2  |  **VersionName:** 1.0.0
+**VersionCode:** 4  |  **VersionName:** 1.2.0
 **Min SDK:** 21 (Android 5.0)  |  **Target SDK:** 37  |  **Compile SDK:** 37
 **Tanggal build:** 11 Agustus 2026
 
@@ -15,10 +15,10 @@
 ```
 ALTOMEDIA/
 ├── build_outputs/
-│   ├── BERUANG-v1.0.0-release.apk      ← untuk distribusi internal/sideloading
-│   └── BERUANG-v1.0.0-release.aab      ← UNTUK PLAY CONSOLE (upload ini)
+│   ├── BERUANG-v1.2.0-release.apk      ← untuk distribusi internal/sideloading
+│   └── BERUANG-v1.2.0-release.aab      ← UNTUK PLAY CONSOLE (upload ini)
 ├── keystore/
-│   └── beruang-release.jks            ← JANGAN HILANGKAN! (signing key)
+│   └── ALTOMEDIA.jks            ← JANGAN HILANGKAN! (signing key)
 ├── listing_assets/
 │   ├── icon_512.png                   ← App icon 512x512
 │   ├── feature_graphic_1024x500.png   ← Feature graphic
@@ -49,11 +49,11 @@ ALTOMEDIA/
 ### 2. Set up app signing (Play App Signing)
 1. Buka **Setup → App signing**
 2. Pilih **Use Play App Signing** (direkomendasikan)
-3. Nanti upload AAB, Play akan minta upload key. Gunakan keystore di `keystore/beruang-release.jks`:
+3. Nanti upload AAB, Play akan minta upload key. Gunakan keystore di `keystore/ALTOMEDIA.jks`:
    - **Keystore password:** Kdsmedia@123
-   - **Key alias:** beruang
+   - **Key alias:** kdsmedia
    - **Key password:** Kdsmedia@123
-   - SHA-1 & SHA-256 dapat dari `keytool -list -v -keystore beruang-release.jks`
+   - SHA-1 & SHA-256 dapat dari `keytool -list -v -keystore ALTOMEDIA.jks`
 
 ### 3. Setup app access
 1. **Set up → App access** → pilih "All functionality is available without restrictions" (tidak ada login berbayar/pembayaran).
@@ -92,8 +92,8 @@ Di **App content → Data safety**, nyatakan:
 ### 10. Upload AAB (Production)
 1. Buka **Release → Production** (atau Testing → Internal untuk uji dulu)
 2. **Create new release**
-3. Upload: `build_outputs/BERUANG-v1.0.0-release.aab`
-4. Release name: `BERUANG 1.0.0` (otomatis)
+3. Upload: `build_outputs/BERUANG-v1.2.0-release.aab`
+4. Release name: `BERUANG 1.2.0` (otomatis)
 5. Release notes: salin dari `release_notes.txt`
 6. **Review release** → selesaikan warning → **Start rollout to Production**
 
@@ -112,11 +112,11 @@ Di **App content → Data safety**, nyatakan:
 
 ## C. CATATAN KEAMANAN
 
-- **Keystore `beruang-release.jks` adalah kunci signing resmi.** Simpan di tempat aman (password manager / backup terenkripsi). Jika hilang, Anda tidak bisa update app di Play Store dengan identitas yang sama.
+- **Keystore `ALTOMEDIA.jks` adalah kunci signing resmi.** Simpan di tempat aman (password manager / backup terenkripsi). Jika hilang, Anda tidak bisa update app di Play Store dengan identitas yang sama.
 - **Jangan commit keystore ke repo publik.** Repo kdsmedia/BERUANG saat ini privat; bila diubah ke publik, segera pindahkan keystore keluar dari repo.
 - Kredensial:
   - Keystore password: `Kdsmedia@123`
-  - Key alias: `beruang`
+  - Key alias: `kdsmedia`
   - Key password: `Kdsmedia@123`
 
 ---
@@ -140,13 +140,20 @@ AGP 8.10.1 dipilih karena AGP 8.5.x tidak mendukung compileSdk 37. Symlink/dupli
 
 - [x] Kode bebas bug/dummy/simulation (audit T1–T6)
 - [x] Build config: minSdk 21, targetSdk 37, compileSdk 37
-- [x] Keystore JKS dibuat (Kdsmedia@123)
+- [x] Keystore ALTOMEDIA.jks dibuat (alias kdsmedia, Kdsmedia@123)
 - [x] APK release signed
 - [x] AAB release signed
-- [x] Store listing assets (icon, feature graphic, 4 screenshots)
+- [x] Store listing assets (icon, feature graphic, 5 screenshots)
 - [x] Privacy policy
 - [x] Terms of service
 - [ ] Host privacy policy + terms ke URL publik (GitHub Pages)
 - [ ] Upload AAB ke Play Console
 - [ ] Isi data safety, content rating, target audience
 - [ ] Submit untuk review
+
+---
+
+## F. KONTAK
+
+Pengembang: **ALTOMEDIA**
+Email: altomediaindonesia@gmail.com

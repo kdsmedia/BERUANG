@@ -36,7 +36,15 @@ Setiap orang memiliki minat yang berbeda. Karena itulah BERUANG menghadirkan fit
 
 Profil yang Mewakili Diri Anda
 
-Halaman profil adalah etalase identitas digital Anda. Anda dapat memasang banner sampul, avatar, dan bio singkat. Tiga tab — Posts, About, Friends — memudahkan pengunjung melihat postingan terbaru Anda, membaca info singkat tentang diri Anda, dan mengetahui siapa saja teman Anda. Bila ingin memperbarui identitas, modal Edit Profile memungkinkan Anda mengganti nama, bio, dan avatar dengan pratinjau langsung sebelum menyimpan perubahan.
+Halaman profil adalah etalase identitas digital Anda. Anda dapat memasang banner sampul, avatar, dan bio singkat. Tiga tab — Posts, About, Friends — memudahkan pengunjung melihat postingan terbaru Anda, membaca info singkat tentang diri Anda, dan mengetahui siapa saja teman Anda. Bila ingin memperbarui identitas, modal Edit Profile memungkinkan Anda mengganti nama, bio, avatar, serta kini juga telepon, email, dan jenis kelamin dengan pratinjau langsung sebelum menyimpan perubahan.
+
+Poin, Dompet, dan Kehangatan Saling Beri
+
+Sejak versi 1.2.0, BERUANG menghadirkan sistem poin virtual yang membuat aktivitas terasa lebih bermakna. Setiap kali Anda membuat postingan, berkomentar, atau menambah teman baru, Anda memperoleh poin: postingan memberi 20 poin, komentar 50 poin, dan pertemanan baru 10 poin. Poin ini bukan uang — ia tidak dapat ditukar dengan rupiah maupun barang — melainkan cara kami mengapresiasi kontribusi Anda pada komunitas.
+
+Lebih menarik lagi, poin dapat Anda kirimkan ke pengguna lain. Setiap akun memiliki ID dompet unik yang ditampilkan dalam bentuk QR code di halaman profil. Teman Anda cukup memindai QR tersebut untuk mentransfer sejumlah poin, dan transaksi dijaga dengan PIN empat digit yang Anda buat sendiri. PIN disimpan hanya dalam bentuk hash, jadi tidak ada yang dapat melihatnya. Untuk menjaga konsistensi saldo, setiap transfer dijalankan sebagai satu operasi tunggal di Firestore — artinya jika satu langkah gagal, seluruh transaksi dibatalkan, sehingga poin Anda tidak akan pernah hilang di tengah jalan.
+
+Semakin aktif Anda berkontribusi, semakin tinggi peringkat tier Anda: Perunggu, Perak, Emas, hingga Platina. Lencana tier ini tampil di profil sebagai penanda status — bukan untuk bersaing, tetapi untuk merayakan kebersamaan dan semangat berbagi yang menjadi inti BERUANG.
 
 Keamanan dan Privasi sebagai Fondasi
 
@@ -57,8 +65,8 @@ Jika Anda mencari ruang sosial yang terasa lebih dekat dengan rumah — yang men
 Sampai jumpa di feed BERUANG.
 
 — Tim Altomedia Indonesia
-Email: privacy@altomedia.id | legal@altomedia.id
+Email: altomediaindonesia@gmail.com
 Kebijakan Privasi: https://kdsmedia.github.io/BERUANG/privacy_policy.html
 Ketentuan Layanan: https://kdsmedia.github.io/BERUANG/terms_of_service.html
 
-(artikel ini disusun sebagai bagian paket rilis BERUANG 1.0.0)
+(artikel ini disusun sebagai bagian paket rilis BERUANG 1.2.0)
