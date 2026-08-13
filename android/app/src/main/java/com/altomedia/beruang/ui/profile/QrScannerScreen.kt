@@ -55,6 +55,10 @@ fun QrScannerScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Guard so the analyzer (which runs on a background executor) delivers the
+    // result exactly once, and always on the main thread.
+    val scanned = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    val mainExecutor = remember(context) { androidx.core.content.ContextCompat.getMainExecutor(context) }
     var granted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -84,7 +88,7 @@ fun QrScannerScreen(
                         val analysis = ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
-                        analysis.setAnalyzer(Executors.newSingleThreadExecutor()) { img -> analyze(img, scanner, onScanned) }
+                        analysis.setAnalyzer(Executors.newSingleThreadExecutor()) { img -> analyze(img, scanner, onScanned, scanned, mainExecutor) }
                         try {
                             provider.unbindAll()
                             provider.bindToLifecycle(
@@ -127,15 +131,24 @@ fun QrScannerScreen(
     }
 }
 
-private fun analyze(image: ImageProxy, scanner: com.google.mlkit.vision.barcode.BarcodeScanner, onScanned: (String) -> Unit) {
+private fun analyze(
+    image: ImageProxy,
+    scanner: com.google.mlkit.vision.barcode.BarcodeScanner,
+    onScanned: (String) -> Unit,
+    guard: java.util.concurrent.atomic.AtomicBoolean,
+    mainExecutor: java.util.concurrent.Executor
+) {
     val mediaImage = image.image
     if (mediaImage == null) { image.close(); return }
     val inputImage = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
     val task: com.google.android.gms.tasks.Task<List<Barcode>> = scanner.process(inputImage)
     task.addOnSuccessListener { barcodes: List<Barcode> ->
             barcodes.firstOrNull()?.rawValue?.let { value ->
-                // Capture only once per successful decode; the caller navigates away.
-                onScanned(value)
+                // Deliver exactly once, on the main thread (the analyzer runs on a
+                // background executor; mutating Compose state off-main crashes).
+                if (guard.compareAndSet(false, true)) {
+                    mainExecutor.execute { onScanned(value) }
+                }
             }
         }
         .addOnCompleteListener { image.close() }

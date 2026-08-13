@@ -126,7 +126,7 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
                             ) { Text("Edit Profile", fontWeight = FontWeight.SemiBold) }
                             Spacer(Modifier.width(8.dp))
                             OutlinedButton(
-                                onClick = { com.google.firebase.auth.FirebaseAuth.getInstance().signOut() },
+                                onClick = { sessionVm.signOut() },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Text),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Line),

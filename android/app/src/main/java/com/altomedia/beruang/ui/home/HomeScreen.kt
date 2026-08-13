@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +45,6 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
     val notifUnread by badgesVm.notifUnread.collectAsStateWithLifecycle()
 
     var composerText by remember { mutableStateOf("") }
-    var activeTab by remember { mutableStateOf("foryou") }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(toast) { toast?.let { snackbarHost.showSnackbar(it); vm.toastShown() } }
@@ -73,16 +71,6 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
                         composerText = ""
                     }
                 )
-            }
-            // Filter tabs
-            item {
-                val tabs = listOf("foryou" to "For You", "friends" to "Friends", "groups" to "Groups", "trending" to "Trending")
-                LazyRow(Modifier.padding(8.dp, 8.dp)) {
-                    items(tabs) { (id, label) ->
-                        Chip(label, selected = activeTab == id) { activeTab = id }
-                        Spacer(Modifier.width(6.dp))
-                    }
-                }
             }
             // Feed
             if (loading && items.isEmpty()) {
@@ -173,15 +161,4 @@ private fun Composer(
         }
     }
     HorizontalDivider(color = Line, thickness = 6.dp)
-}
-
-@Composable
-private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.clip(RoundedCornerShape(50))
-            .background(if (selected) GreenSoft else Surface2)
-            .clickable { onClick() }.padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(label, color = if (selected) Green else Muted, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
-    }
 }

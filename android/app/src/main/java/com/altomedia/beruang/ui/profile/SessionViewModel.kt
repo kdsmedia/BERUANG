@@ -14,4 +14,11 @@ class SessionViewModel @Inject constructor(
 ) : ViewModel() {
     val uid: StateFlow<String?> = MutableStateFlow(profileRepo.currentUid)
     fun sync() { (uid as MutableStateFlow).value = profileRepo.currentUid }
+
+    /** Signs out and clears cached profile data so a subsequent login starts clean. */
+    fun signOut() {
+        profileRepo.clearCache()
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        (uid as MutableStateFlow).value = null
+    }
 }

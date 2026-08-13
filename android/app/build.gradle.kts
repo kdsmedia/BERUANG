@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -8,23 +11,31 @@ plugins {
 
 android {
     namespace = "com.altomedia.beruang"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.altomedia.beruang"
         minSdk = 21
-        targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.0"
+        targetSdk = 37
+        versionCode = 4
+        versionName = "1.2.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
+    // Release signing key is read from keystore.properties so the credentials
+    // are not hard-coded in the build file. The keystore is ALTOMEDIA.jks
+    // (see ALTOMEDIA/keystore/), alias kdsmedia.
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties()
+    if (keystorePropsFile.exists()) {
+        keystoreProps.load(FileInputStream(keystorePropsFile))
+    }
     signingConfigs {
         create("release") {
-            storeFile = file("../beruang-release.jks")
-            storePassword = "Kdsmedia@123"
-            keyAlias = "beruang"
-            keyPassword = "Kdsmedia@123"
+            storeFile = file(keystoreProps.getProperty("storeFile", "../../ALTOMEDIA/keystore/ALTOMEDIA.jks"))
+            storePassword = keystoreProps.getProperty("storePassword", "Kdsmedia@123")
+            keyAlias = keystoreProps.getProperty("keyAlias", "kdsmedia")
+            keyPassword = keystoreProps.getProperty("keyPassword", "Kdsmedia@123")
         }
     }
 

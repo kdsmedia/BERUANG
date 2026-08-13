@@ -118,11 +118,19 @@ class AccountsRepository @Inject constructor(
 
         val myBalance = getBalance(me)
         if (myBalance < amount) return TransferResult.Error("Poin tidak cukup. Saldo: $myBalance")
+        val recipientBalance = getBalance(recipient.id)
 
-        // Debit sender, credit recipient, record transaction.
-        wallets.document(me).set(WalletDoc(balance = myBalance - amount)).await()
-        awardPoints(recipient.id, amount)
-        transactions.add(Transaction(from_id = me, to_id = recipient.id, amount = amount)).await()
+        // Debit sender, credit recipient, and record the transaction atomically
+        // in a single Firestore batch so a failure mid-way never loses points
+        // without also recording the transaction.
+        db.runBatch { batch ->
+            batch.set(wallets.document(me), WalletDoc(balance = myBalance - amount))
+            batch.set(wallets.document(recipient.id), WalletDoc(balance = recipientBalance + amount))
+            batch.set(
+                transactions.document(),
+                Transaction(from_id = me, to_id = recipient.id, amount = amount)
+            )
+        }.await()
         return TransferResult.Success(recipient.displayName, amount)
     }
 }

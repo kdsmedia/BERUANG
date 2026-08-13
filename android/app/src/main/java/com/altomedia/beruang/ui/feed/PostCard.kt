@@ -7,14 +7,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Comment
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
@@ -53,10 +50,10 @@ fun PostCard(
 ) {
     val post = item.post
     var menuOpen by remember { mutableStateOf(false) }
-    var saved by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     val profilesVm: com.altomedia.beruang.ui.profile.SessionViewModel = hiltViewModel()
     val currentUid by profilesVm.uid.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(Modifier.fillMaxWidth().background(Surface).padding(vertical = 8.dp)) {
         // Header
@@ -87,7 +84,19 @@ fun PostCard(
                         if (currentUid == post.user_id) {
                             DropdownItem("Delete", Icons.Filled.Delete, Danger) { menuOpen = false; onDeletePost() }
                         }
-                        DropdownItem(if (saved) "Unsave" else "Save", if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, Text) { saved = !saved; menuOpen = false }
+                        DropdownItem("Share", Icons.Outlined.Share, Text) {
+                            menuOpen = false
+                            val shareText = buildString {
+                                append(item.author.displayName); append(": ")
+                                post.content?.let { append(it); append("\n") }
+                                append("\nShared from BERUANG")
+                            }
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, "Share post"))
+                        }
                         DropdownItem("Cancel", Icons.Filled.Close, Muted) { menuOpen = false }
                     }
                 }
@@ -121,13 +130,21 @@ fun PostCard(
             IconButton(onClick = onToggleComments, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.AutoMirrored.Outlined.Comment, contentDescription = "comment", tint = Text)
             }
-            IconButton(onClick = { /* noop */ }, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = {
+                val shareText = buildString {
+                    append(item.author.displayName); append(": ")
+                    post.content?.let { append(it); append("\n") }
+                    append("\nShared from BERUANG")
+                }
+                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                }
+                context.startActivity(android.content.Intent.createChooser(intent, "Share post"))
+            }, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Outlined.Share, contentDescription = "share", tint = Text)
             }
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { saved = !saved }, modifier = Modifier.size(40.dp)) {
-                Icon(if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "save", tint = Text)
-            }
         }
 
         // Likes count

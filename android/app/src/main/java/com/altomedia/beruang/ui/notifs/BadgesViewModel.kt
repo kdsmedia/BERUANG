@@ -29,9 +29,11 @@ class BadgesViewModel @Inject constructor(
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
-        _notifUnread.value = notifsRepo.unreadCount()
-        val convos = messagesRepo.conversationList()
-        _msgUnread.value = convos.sumOf { it.unread }
-        _frPending.value = friendsRepo.state().pendingIn.size
+        // All three calls hit Firestore; any one can throw on network/permission
+        // errors. Guard each independently so a failure never crashes the app
+        // (this ViewModel is mounted on every RootNav composition).
+        _notifUnread.value = runCatching { notifsRepo.unreadCount() }.getOrDefault(0)
+        _msgUnread.value = runCatching { messagesRepo.conversationList().sumOf { it.unread } }.getOrDefault(0)
+        _frPending.value = runCatching { friendsRepo.state().pendingIn.size }.getOrDefault(0)
     }
 }
