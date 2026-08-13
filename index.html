@@ -19,6 +19,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- QR code generator (renders the user's account_id as a QR) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --bg:#0b110e;
@@ -275,6 +277,32 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
 .stat .n{font-size:20px;font-weight:700}
 .stat .l{font-size:12px;color:var(--muted)}
 
+/* ---------- points / wallet ---------- */
+.points-card{margin:0 14px 14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.points-top{display:flex;align-items:center;gap:12px}
+.points-top .coin{width:48px;height:48px;border-radius:50%;background:var(--gold-soft);display:grid;place-items:center;font-size:26px;flex:0 0 auto}
+.points-top .lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px}
+.points-top .bal{display:flex;align-items:baseline;gap:4px;margin-top:2px}
+.points-top .bal .v{font-size:28px;font-weight:800;color:var(--brand)}
+.points-top .bal .u{font-size:13px;font-weight:600;color:var(--brand)}
+.rank-pill{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.rank-pill .ri{font-size:13px;line-height:1}
+.acct-row{display:flex;align-items:center;gap:8px;margin-top:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.acct-row .k{font-size:12px;color:var(--muted);font-weight:500}
+.acct-row .v{margin-left:auto;font-size:16px;font-weight:700;letter-spacing:1px}
+.points-actions{display:flex;gap:10px;margin-top:12px}
+.points-actions .btn{flex:1}
+.points-next{margin-top:8px;font-size:11px;color:var(--muted)}
+.qr-box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 4px}
+.qr-box .img{background:#fff;padding:10px;border-radius:12px;line-height:0}
+.qr-box .img img,.qr-box .img canvas{display:block;width:200px!important;height:200px!important}
+.qr-box .id{font-size:16px;font-weight:700;letter-spacing:1px}
+.qr-box .hint{font-size:11px;color:var(--muted);text-align:center}
+.scan-wrap{position:relative;width:100%;max-width:340px;margin:0 auto;aspect-ratio:1;background:#000;border-radius:16px;overflow:hidden}
+.scan-wrap video,.scan-wrap .scan-canvas{width:100%;height:100%;object-fit:cover}
+.scan-frame{position:absolute;inset:18% 12%;border:3px solid var(--brand);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.25)}
+.scan-cap{text-align:center;margin-top:12px;font-size:12px;color:var(--muted)}
+
 /* ---------- bottom nav ---------- */
 .bottom-nav{
   position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:60;
@@ -523,6 +551,38 @@ let activeChatPoll = null;
 let globalChatPoll = null;
 let activeView = 'home';
 
+/* ===================== points / rank ===================== */
+const POINTS = { post: 20, comment: 50, friend: 10 };
+// Rank tiers mirror the Android app (RankTiers.kt).
+const RANK_TIERS = [
+  { key:'start',  label:'Start',  emoji:'🌱', color:'#8E8E8E', min: 0 },
+  { key:'bronze', label:'Bronze', emoji:'🥉', color:'#CD7F32', min: 100 },
+  { key:'silver', label:'Silver', emoji:'🥈', color:'#B0B0B0', min: 500 },
+  { key:'gold',   label:'Gold',   emoji:'🥇', color:'#F59E0B', min: 2000 },
+  { key:'master', label:'Master', emoji:'👑', color:'#9333EA', min: 10000 }
+];
+function rankFor(points){
+  let t = RANK_TIERS[0];
+  for(const tier of RANK_TIERS) if((points||0) >= tier.min) t = tier;
+  return t;
+}
+function nextTier(points){
+  for(const tier of RANK_TIERS) if(tier.min > (points||0)) return tier;
+  return null;
+}
+// Award points for an activity by calling the award_points RPC and refresh balance.
+async function awardPoints(reason, amount){
+  if(!sessionUser) return;
+  const { error } = await safeQuery(()=> db.rpc('award_points', { uid: sessionUser.id, reason, amount }));
+  if(error){ console.warn('award_points failed', error); return; }
+  // Refresh the wallet balance locally.
+  const { data: w } = await safeQuery(()=> db.from('wallets').select('balance').eq('user_id', sessionUser.id).maybeSingle());
+  if(myProfile){
+    myProfile.points = (w && typeof w.balance === 'number') ? w.balance : (myProfile.points||0) + amount;
+    profilesCache.set(myProfile.id, myProfile);
+  }
+}
+
 /* ===================== auth ===================== */
 function initAuth(){
   $('#form-login').addEventListener('submit', onLogin);
@@ -564,15 +624,30 @@ async function loadMyProfile(){
   if(!sessionUser) return;
   const { data, error } = await safeQuery(()=> db.from('profiles').select('*').eq('id', sessionUser.id).maybeSingle());
   if(error){ console.warn('profile load', error); return; }
-  if(data){ myProfile = data; profilesCache.set(data.id, data); }
+  if(data){
+    // Ensure the user has a 6-digit account_id (the trigger usually does this
+    // at signup, but older accounts may not have one yet).
+    if(!data.account_id){
+      const { data: aid, error: e2 } = await safeQuery(()=> db.rpc('ensure_account_id', { uid: sessionUser.id }));
+      if(!e2 && aid) data.account_id = aid;
+    }
+    // Wallet is the source of truth for the balance; fall back to profile.points.
+    const { data: w } = await safeQuery(()=> db.from('wallets').select('balance').eq('user_id', sessionUser.id).maybeSingle());
+    if(w && typeof w.balance === 'number') data.points = w.balance;
+    myProfile = data; profilesCache.set(data.id, data);
+  }
   else {
     // trigger should have created it; create manually as fallback (RLS: own id)
     const fallback = { id: sessionUser.id, full_name: sessionUser.user_metadata?.full_name || 'New Goat',
       bio: "Hey there! I am using BERUANG.",
       avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sessionUser.id}`,
-      cover_url: null, created_at: new Date().toISOString() };
+      cover_url: null, phone: null, email: null, gender: null, points: 0,
+      account_id: null, points_pin: null, created_at: new Date().toISOString() };
     const { data: ins } = await safeQuery(()=> db.from('profiles').insert(fallback).select().maybeSingle());
     myProfile = ins || fallback; profilesCache.set(myProfile.id, myProfile);
+    // Ensure account_id + wallet for the freshly created profile.
+    const { data: aid } = await safeQuery(()=> db.rpc('ensure_account_id', { uid: sessionUser.id }));
+    if(aid){ myProfile.account_id = aid; profilesCache.set(myProfile.id, myProfile); }
   }
 }
 function showAuth(){ $('#view-auth').classList.remove('hidden'); $('#app-shell').classList.add('hidden'); }
@@ -789,6 +864,7 @@ async function submitPost(){
     const row = { user_id: sessionUser.id, content: content || null, image_url, video_url, location: composer.location || null };
     const { error } = await safeQuery(()=> db.from('posts').insert(row));
     if(error) throw error;
+    awardPoints('post', POINTS.post);
     toast('Posted!'); renderComposer(); loadFeed(); loadStories();
   }catch(err){ console.error(err); toast('Post failed: '+(err.message||err)); }
   finally{ btn.disabled=false; btn.textContent='Post'; }
@@ -942,6 +1018,7 @@ window.sendComment = async function(pid){
   inp.value='';
   const { error } = await safeQuery(()=> db.from('comments').insert({ post_id:pid, user_id:sessionUser.id, content:text }));
   if(error){ toast('Comment failed'); return; }
+  awardPoints('comment', POINTS.comment);
   const owner = $('#post-'+pid)?.dataset.owner;
   if(owner && owner !== sessionUser.id) createNotif(owner,'comment',pid,'commented on your post');
   loadComments(pid);
@@ -1087,7 +1164,13 @@ window.addFriend = async function(id){
 window.acceptFriend = async function(fid){
   const { data, error } = await safeQuery(()=> db.from('friendships').update({ status:'accepted' }).eq('id', fid).select().maybeSingle());
   if(error){ toast('Accept failed'); return; }
-  if(data?.user_id) createNotif(data.user_id,'friend_accept',null,'accepted your friend request');
+  if(data?.user_id){
+    createNotif(data.user_id,'friend_accept',null,'accepted your friend request');
+    // +10 poin untuk kedua pengguna saat pertemanan terbentuk.
+    const other = data.user_id === sessionUser.id ? data.friend_id : data.user_id;
+    awardPoints('friend', POINTS.friend);
+    safeQuery(()=> db.rpc('award_points', { uid: other, reason:'friend', amount: POINTS.friend }));
+  }
   toast('You are now friends'); loadFriends(); refreshBadges();
 };
 window.declineFriend = async function(fid){
@@ -1338,17 +1421,41 @@ async function loadProfile(userId){
   ]);
   const friendCount = (friendsRows||[]).length;
   const postCount = (posts||[]).length;
+  const pts = Number(prof.points||0);
+  const rank = rankFor(pts);
+  // The wallet is authoritative for the signed-in user; sync it into the snapshot.
+  if(isMe && myProfile && typeof myProfile.points === 'number'){
+    prof.points = myProfile.points;
+  }
+  const myPts = isMe && myProfile ? Number(myProfile.points||0) : pts;
+  const myRank = rankFor(myPts);
   el.innerHTML = `
     <div class="cover" style="${prof.cover_url?`background-image:url('${esc(prof.cover_url)}')`:''}"></div>
     <div class="profile-head">
       <div class="ava" style="background-image:url('${esc(avatarFor(prof))}')"></div>
       ${isMe?`<button class="btn btn-ghost btn-sm" style="position:absolute;top:8px;right:8px" onclick="openEditProfile()"><i class="fa-solid fa-pen"></i> Edit</button>
               <button class="btn btn-danger btn-sm" style="position:absolute;top:8px;right:8px;display:none" onclick="logout()"></button>`:''}
-      <div class="nm">${esc(prof.full_name||'User')} <span class="badge"><i class="fa-solid fa-circle-check"></i></span></div>
+      <div class="nm">${esc(prof.full_name||'User')} <span class="rank-pill" style="background:${rank.color}26;color:${rank.color}"><span class="ri">${rank.emoji}</span>${rank.label}</span></div>
       <div class="bio">${esc(prof.bio||'')}</div>
       ${isMe?`<div class="row"><button class="btn btn-primary btn-sm" onclick="openEditProfile()"><i class="fa-solid fa-pen"></i> Edit Profile</button><button class="btn btn-ghost btn-sm" onclick="logout()">Log out</button></div>`
             :`<div class="row"><button class="btn btn-primary btn-sm" onclick="messageUser('${userId}')"><i class="fa-regular fa-comment"></i> Message</button>
                      <button class="btn btn-ghost btn-sm" onclick="addFriend('${userId}')"><i class="fa-solid fa-user-plus"></i> Add</button></div>`}
+    </div>
+    <div class="points-card">
+      <div class="points-top">
+        <div class="coin">🐻</div>
+        <div style="flex:1">
+          <div class="lbl">POIN BERUANG</div>
+          <div class="bal"><span class="v">${myPts}</span><span class="u">pts</span></div>
+          <span class="rank-pill" style="background:${myRank.color}26;color:${myRank.color}"><span class="ri">${myRank.emoji}</span>${myRank.label}</span>
+        </div>
+      </div>
+      <div class="acct-row"><span class="k">ID Akun</span><span class="v">${esc(prof.account_id||'------')}</span></div>
+      ${isMe?`<div class="points-actions">
+        <button class="btn btn-ghost btn-sm" onclick="showMyQr()"><i class="fa-solid fa-qrcode"></i> QR Saya</button>
+        <button class="btn btn-primary btn-sm" onclick="openScanQr()"><i class="fa-solid fa-camera"></i> Scan QR</button>
+      </div>`:''}
+      ${(()=>{ const n=nextTier(myPts); return n?`<div class="points-next">Naik ke ${n.label}: butuh ${n.min-myPts} poin lagi.</div>`:`<div class="points-next">Peringkat tertinggi tercapai 👑</div>`; })()}
     </div>
     <div class="stat-grid">
       <div class="stat"><div class="n">${postCount}</div><div class="l">Posts</div></div>
@@ -1373,9 +1480,14 @@ window.setProfileTab = async function(tab, userId){
     body.innerHTML = data.map(renderPostCard).join('');
   } else if(tab==='about'){
     const prof = profilesCache.get(userId) || {};
+    const genderLabel = prof.gender==='male'?'Pria':prof.gender==='female'?'Wanita':prof.gender==='other'?'Lainnya':'-';
     body.innerHTML = `<div class="section">
       <div class="list-card"><div class="info"><div class="nm">Bio</div><div class="sub">${esc(prof.bio||'No bio yet.')}</div></div></div>
       <div class="list-card"><div class="info"><div class="nm">Name</div><div class="sub">${esc(prof.full_name||'User')}</div></div></div>
+      <div class="list-card"><div class="info"><div class="nm">ID Akun</div><div class="sub">${esc(prof.account_id||'-')}</div></div></div>
+      <div class="list-card"><div class="info"><div class="nm">No. HP</div><div class="sub">${esc(prof.phone||'-')}</div></div></div>
+      <div class="list-card"><div class="info"><div class="nm">Email</div><div class="sub">${esc(prof.email||'-')}</div></div></div>
+      <div class="list-card"><div class="info"><div class="nm">Jenis Kelamin</div><div class="sub">${genderLabel}</div></div></div>
       <div class="list-card"><div class="info"><div class="nm">Joined</div><div class="sub">${new Date(prof.created_at||Date.now()).toLocaleDateString()}</div></div></div>
     </div>`;
   } else {
@@ -1396,6 +1508,7 @@ window.setProfileTab = async function(tab, userId){
 let editAvatarFile = null;
 function openEditProfile(){
   editAvatarFile = null;
+  const g = myProfile?.gender||'';
   openModal(`
     <div class="sh-head"><div class="t">Edit Profile</div><button onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="sh-body">
@@ -1404,8 +1517,18 @@ function openEditProfile(){
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ava-file').click()"><i class="fa-solid fa-camera"></i>Change avatar</button>
         <input type="file" id="ava-file" accept="image/*" class="hidden">
       </div>
-      <div class="field"><label>Full name</label><input id="ep-name" value="${esc(myProfile?.full_name||'')}"></div>
+      <div class="field"><label>Nama lengkap</label><input id="ep-name" value="${esc(myProfile?.full_name||'')}"></div>
       <div class="field"><label>Bio</label><textarea id="ep-bio" rows="3">${esc(myProfile?.bio||'')}</textarea></div>
+      <div class="field"><label>Nomor HP</label><input id="ep-phone" type="tel" inputmode="tel" placeholder="08xxxxxxxx" value="${esc(myProfile?.phone||'')}"></div>
+      <div class="field"><label>Email (opsional)</label><input id="ep-email" type="email" placeholder="opsional" value="${esc(myProfile?.email||'')}"></div>
+      <div class="field"><label>Jenis kelamin</label>
+        <select id="ep-gender">
+          <option value="">Pilih…</option>
+          <option value="male" ${g==='male'?'selected':''}>Pria</option>
+          <option value="female" ${g==='female'?'selected':''}>Wanita</option>
+          <option value="other" ${g==='other'?'selected':''}>Lainnya</option>
+        </select>
+      </div>
       <button class="btn btn-primary btn-block" onclick="saveProfile()">Save</button>
     </div>`);
   $('#ava-file').addEventListener('change', e=>{
@@ -1415,6 +1538,8 @@ function openEditProfile(){
 }
 window.saveProfile = async function(){
   const name = $('#ep-name').value.trim(); const bio = $('#ep-bio').value.trim();
+  const phone = $('#ep-phone').value.trim(); const email = $('#ep-email').value.trim();
+  const gender = $('#ep-gender').value || null;
   if(!name){ toast('Name required'); return; }
   let avatar_url = myProfile?.avatar_url;
   if(editAvatarFile){
@@ -1423,13 +1548,134 @@ window.saveProfile = async function(){
     if(up.error){ toast('Avatar upload failed'); return; }
     avatar_url = storage.from('avatars').getPublicUrl(path).data.publicUrl;
   }
-  const { data, error } = await safeQuery(()=> db.from('profiles').update({ full_name:name, bio, avatar_url }).eq('id', sessionUser.id).select().maybeSingle());
+  const patch = { full_name:name, bio, avatar_url, phone: phone||null, email: email||null, gender };
+  const { data, error } = await safeQuery(()=> db.from('profiles').update(patch).eq('id', sessionUser.id).select().maybeSingle());
   if(error){ toast('Save failed'); return; }
   if(data){ myProfile = data; profilesCache.set(data.id, data); }
   closeModal(); toast('Profile updated'); loadProfile(sessionUser.id); refreshAll();
 };
 
-/* ===================== composer pickers ===================== */
+/* ===================== points QR / transfer ===================== */
+// Show the signed-in user's QR (encodes their 6-digit account_id).
+window.showMyQr = function(){
+  const aid = myProfile?.account_id || '------';
+  openModal(`
+    <div class="sh-head"><div class="t">QR Akun Saya</div><button onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sh-body">
+      <div class="qr-box">
+        <div class="img" id="my-qr"></div>
+        <div class="nm">${esc(myProfile?.full_name||'User')}</div>
+        <div class="id">ID: ${esc(aid)}</div>
+        <div class="hint">Scan QR ini untuk menerima poin dari pengguna lain.</div>
+      </div>
+    </div>`);
+  const host = $('#my-qr');
+  if(host && window.QRCode){ new QRCode(host, { text: aid, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M }); }
+  else if(host){ host.textContent = aid; }
+};
+
+// Open the camera scanner for a recipient's account_id, then the transfer dialog.
+let scanStream = null;
+window.openScanQr = function(){
+  openModal(`
+    <div class="sh-head"><div class="t">Scan QR Tujuan</div><button onclick="closeScanQr()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sh-body">
+      <div class="scan-wrap"><video id="scan-video" autoplay playsinline muted></video><div class="scan-frame"></div></div>
+      <div class="scan-cap" id="scan-cap">Arahkan kamera ke QR tujuan…</div>
+      <div class="field" style="margin-top:14px"><label>Atau masukkan ID Akun tujuan manual</label>
+        <input id="manual-aid" inputmode="numeric" maxlength="6" placeholder="6 digit"></div>
+      <button class="btn btn-primary btn-block" onclick="manualRecipient()">Lanjut Transfer</button>
+    </div>`);
+  startQrScan();
+};
+window.closeScanQr = function(){
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  closeModal();
+};
+function manualRecipient(){
+  const v = ($('#manual-aid')?.value||'').trim();
+  if(v.length !== 6 || !/^\d{6}$/.test(v)){ toast('ID Akun harus 6 digit angka'); return; }
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  closeModal();
+  openTransfer(v);
+}
+async function startQrScan(){
+  const video = $('#scan-video');
+  const cap = $('#scan-cap');
+  if(!video) return;
+  // Prefer the native BarcodeDetector API (Chrome/Edge); fast and dependency-free.
+  const BarcodeDetector = window.BarcodeDetector;
+  if(!navigator.mediaDevices || !BarcodeDetector){
+    cap.textContent = 'Kamera tidak didukung. Masukkan ID manual di bawah.';
+    return;
+  }
+  try{ scanStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } }); }
+  catch(e){ cap.textContent = 'Gagal akses kamera. Masukkan ID manual.'; return; }
+  video.srcObject = scanStream; video.play();
+  const detector = new BarcodeDetector({ formats:['qr_code'] });
+  let scanning = true;
+  video._scanLoop = async ()=>{
+    if(!scanning || !scanStream) return;
+    try{
+      const codes = await detector.detect(video);
+      if(codes && codes.length){
+        const val = (codes[0].rawValue||'').trim();
+        if(/^\d{6}$/.test(val)){ scanning = false; stopScan(); closeModal(); openTransfer(val); return; }
+      }
+    }catch(_){}
+    if(scanning) requestAnimationFrame(video._scanLoop);
+  };
+  requestAnimationFrame(video._scanLoop);
+}
+function stopScan(){ if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; } }
+
+// Transfer dialog: amount + 4-digit PIN. Sets a PIN first if the user has none.
+window.openTransfer = function(recipientAccountId){
+  const hasPin = !!(myProfile && myProfile.points_pin);
+  openModal(`
+    <div class="sh-head"><div class="t">${hasPin?'Transfer Poin':'Atur PIN Transaksi'}</div><button onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="sh-body">
+      <div class="acct-row"><span class="k">Ke ID</span><span class="v">${esc(recipientAccountId)}</span></div>
+      <div class="field" style="margin-top:14px"><label>Jumlah poin</label><input id="tf-amount" type="number" inputmode="numeric" min="1" placeholder="0"></div>
+      <div class="field"><label>${hasPin?'PIN (4 digit)':'Buat PIN (4 digit)'}</label><input id="tf-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+      ${hasPin?'':'<div class="scan-cap">Belum ada PIN. Buat 4 digit angka untuk transaksi poin.</div>'}
+      <button class="btn btn-primary btn-block" id="tf-submit" onclick="submitTransfer('${esc(recipientAccountId)}')">${hasPin?'Kirim':'Atur PIN'}</button>
+    </div>`);
+  $('#tf-pin').addEventListener('input', e=>{ e.target.value = (e.target.value||'').replace(/\D/g,'').slice(0,4); });
+  $('#tf-amount').addEventListener('input', e=>{ e.target.value = (e.target.value||'').replace(/\D/g,'').slice(0,6); });
+};
+window.submitTransfer = async function(toAccountId){
+  const amt = parseInt(($('#tf-amount')?.value||''),10);
+  const pin = ($('#tf-pin')?.value||'').trim();
+  if(!amt || amt <= 0){ toast('Nominal harus lebih dari 0'); return; }
+  if(pin.length !== 4 || !/^\d{4}$/.test(pin)){ toast('PIN harus 4 digit angka'); return; }
+  const hasPin = !!(myProfile && myProfile.points_pin);
+  const btn = $('#tf-submit'); if(btn){ btn.disabled = true; btn.textContent = 'Memproses…'; }
+  if(!hasPin){
+    // Set the PIN first, then proceed to the actual transfer.
+    const { error: pe } = await safeQuery(()=> db.rpc('set_points_pin', { pin }));
+    if(pe){ toast(pe.message||'PIN gagal disimpan'); if(btn){ btn.disabled=false; btn.textContent='Atur PIN'; } return; }
+    if(myProfile) myProfile.points_pin = 'set';
+    const { error } = await safeQuery(()=> db.rpc('transfer_points', { to_account_id: toAccountId, amount: amt, pin }));
+    finishTransfer(error, toAccountId, amt, btn, 'Kirim');
+    return;
+  }
+  const { error } = await safeQuery(()=> db.rpc('transfer_points', { to_account_id: toAccountId, amount: amt, pin }));
+  finishTransfer(error, toAccountId, amt, btn, 'Kirim');
+};
+async function finishTransfer(error, toAccountId, amt, btn, label){
+  if(error){
+    toast(error.message||'Transfer gagal');
+    if(btn){ btn.disabled=false; btn.textContent=label; }
+    return;
+  }
+  // Refresh the wallet balance + profile, then re-render the profile page.
+  await loadMyProfile();
+  closeModal(); toast(`Berhasil kirim ${amt} poin ke ${toAccountId}`);
+  if(activeView==='profile') loadProfile(sessionUser.id);
+}
+
+
 const FEELINGS = [
   {emoji:'😊',label:'happy'},{emoji:'😂',label:'amused'},{emoji:'🥳',label:'celebrating'},{emoji:'😎',label:'cool'},
   {emoji:'😢',label:'sad'},{emoji:'😭',label:'crying'},{emoji:'😡',label:'angry'},{emoji:'🤔',label:'thoughtful'},
@@ -1522,7 +1768,10 @@ function openModal(html){
   root.innerHTML = `<div class="modal-bg" id="modal-bg"><div class="sheet">${html}</div></div>`;
   $('#modal-bg').addEventListener('click', e=>{ if(e.target.id==='modal-bg') closeModal(); });
 }
-window.closeModal = function(){ const r=$('#modal-root'); if(r) r.innerHTML=''; };
+window.closeModal = function(){
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  const r=$('#modal-root'); if(r) r.innerHTML='';
+};
 
 /* ===================== badges ===================== */
 async function refreshBadges(){
