@@ -6,9 +6,11 @@ Single-file Supabase-backed social app.
 - `index.html` — self-contained app (HTML+CSS+JS). Swap `SUPABASE_URL` and `SUPABASE_ANON_KEY` near the top of the `<script>` before use. Only the anon/publishable key is used client-side.
 
 Schema/JS invariants (must stay in sync):
-- Tables referenced by `db.from('...')`: profiles, posts, likes, comments, stories, messages, global_messages, friendships, groups, group_members, notifications.
+- Tables referenced by `db.from('...')`: profiles, posts, likes, comments, stories, messages, global_messages, friendships, groups, group_members, notifications, wallets, transactions, point_events.
 - Storage buckets (`storage.from('...')`): `posts`, `avatars`.
 - All storage uploads use the path `${sessionUser.id}/<file>` so the folder matches `auth.uid()` per the RLS policies.
+- RPC functions called via `db.rpc('...')`: `ensure_account_id`, `award_points`, `set_points_pin`, `transfer_points`. All are `SECURITY DEFINER`; `wallets`/`transactions`/`point_events` are owner-read-only via RLS and all writes go through these functions.
+- Points/wallet feature (mirrors the Android app): `profiles` carries `points` (snapshot), `account_id` (unique 6-digit), `points_pin` (SHA-256 hex of `beruang:<pin>` via pgcrypto `digest`), `phone`, `email`, `gender` ('male'|'female'|'other'). `wallets(user_id, balance)` is the source of truth for the balance. Rewards: post +20, comment +50, friend accepted +10 (both users). Rank tiers: Start(0)/Bronze(100)/Silver(500)/Gold(2000)/Master(10000). QR encodes the `account_id`; scan + amount + 4-digit PIN → `transfer_points`.
 
 Known security notes about the provided SQL (flagged, intentionally not fixed):
 - `notifications` INSERT policy is `WITH CHECK (true)` — any authed user can insert a notification for any other user with arbitrary content.
