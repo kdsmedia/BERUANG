@@ -12,7 +12,7 @@
 2. **Firestore Database → Create database** (start in production mode; the rules below secure it).
 3. **Storage → Get started** (default bucket `altomedia-indonesia.firebasestorage.app`).
 
-## 2. Deploy security rules (mirrors the Supabase RLS)
+## 2. Deploy security rules
 From the `android/` folder (requires the Firebase CLI: `npm i -g firebase-tools`):
 ```bash
 firebase login
@@ -20,10 +20,10 @@ firebase deploy --only firestore:rules,storage
 ```
 This deploys `app/firestore.rules` and `app/storage.rules`.
 
-> ⚠️ Two rules intentionally mirror the looser-than-ideal Supabase policies:
+> ⚠️ Two rules are intentionally loose (flagged, tighten in production if desired):
 > - `notifications` allow `create: if signedIn()` — any signed-in user can insert a notification for any user.
 > - `friendships` allow `update` by either party — the sender can self-accept their own pending request.
-> Tighten in production if desired (e.g. require a `SECURITY DEFINER`-style Cloud Function for notifications).
+> Consider a `SECURITY DEFINER`-style Cloud Function for notifications.
 
 ## 3. Build & run
 Open the `android/` folder in Android Studio, let Gradle sync, then Run (▶) on a device/emulator
@@ -31,11 +31,10 @@ Open the `android/` folder in Android Studio, let Gradle sync, then Run (▶) on
 fallback path (a Cloud Function trigger is recommended for guaranteed creation — see note below).
 
 ## Note on auto-profile creation
-Supabase used a Postgres trigger (`handle_new_user`) to create a profile row on signup. Firebase
-Auth has no equivalent server-side trigger unless you add a Cloud Function. This app includes a
-client-side fallback: `ProfileRepository.loadMyProfile()` writes a `profiles` doc for the current
-user on first load if one doesn't exist (allowed by the `profiles` create rule). For a more robust
-setup, deploy an `onCreate` Auth Cloud Function that writes the doc.
+There is no server-side Auth trigger that auto-creates a `profiles` row on signup unless you add a
+Cloud Function. This app includes a client-side fallback: `ProfileRepository.loadMyProfile()` writes
+a `profiles` doc for the current user on first load if one doesn't exist (allowed by the `profiles`
+create rule). For a more robust setup, deploy an `onCreate` Auth Cloud Function that writes the doc.
 
 ## Project layout
 ```
