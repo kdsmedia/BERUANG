@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   bio TEXT DEFAULT 'Hey there! I am using BERUANG.',
   avatar_url TEXT,
   cover_url TEXT,
+  phone TEXT,
+  email TEXT,
+  gender TEXT CHECK (gender IS NULL OR gender IN ('male','female','other')),
+  points BIGINT NOT NULL DEFAULT 0,
+  account_id TEXT UNIQUE,
+  points_pin TEXT, -- SHA-256 hex digest of the 4-digit transaction PIN
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -119,6 +125,30 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Wallets (one row per user; authoritative points balance for transfers)
+CREATE TABLE IF NOT EXISTS wallets (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  balance BIGINT NOT NULL DEFAULT 0
+);
+
+-- Transactions (points transfers between users)
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  from_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  to_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  amount BIGINT NOT NULL CHECK (amount > 0),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Point events (audit log for activity rewards: post/comment/friend)
+CREATE TABLE IF NOT EXISTS point_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  reason TEXT NOT NULL, -- 'post' | 'comment' | 'friend'
+  amount BIGINT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 
 
 
@@ -136,6 +166,9 @@ ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE point_events ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -198,6 +231,15 @@ CREATE POLICY "Users can view their own notifications" ON notifications FOR SELE
 CREATE POLICY "System can create notifications" ON notifications FOR INSERT WITH CHECK (true); -- Allows triggers or other users to insert
 CREATE POLICY "Users can update their own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
 
+-- WALLETS (owner read only; all writes go through SECURITY DEFINER functions)
+CREATE POLICY "Users can read own wallet" ON wallets FOR SELECT USING (auth.uid() = user_id);
+
+-- TRANSACTIONS (sender & recipient can read their own transfers)
+CREATE POLICY "Users can view their transactions" ON transactions FOR SELECT USING (auth.uid() = from_id OR auth.uid() = to_id);
+
+-- POINT EVENTS (owner can read their own reward history)
+CREATE POLICY "Users can view their own point events" ON point_events FOR SELECT USING (auth.uid() = user_id);
+
 
 
 
@@ -225,7 +267,108 @@ CREATE POLICY "Users can delete own avatars" ON storage.objects FOR DELETE USING
 
 
 -- ==========================================
--- 5. AUTO-CREATE PROFILE TRIGGER
+-- 5. EXTENSIONS & POINTS FUNCTIONS
+-- ==========================================
+
+-- pgcrypto provides digest() for SHA-256 hashing of the transaction PIN.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Hash a 4-digit PIN exactly like the Android app (SHA-256 of "beruang:<pin>").
+CREATE OR REPLACE FUNCTION public.hash_pin(pin TEXT) RETURNS TEXT AS $$
+  SELECT encode(digest('beruang:' || pin, 'sha256'), 'hex');
+$$ LANGUAGE SQL IMMUTABLE;
+
+-- Generate a unique 6-digit account_id for a user if they don't have one yet.
+CREATE OR REPLACE FUNCTION public.ensure_account_id(uid UUID)
+RETURNS TEXT AS $$
+DECLARE
+  existing TEXT;
+  new_id TEXT;
+  attempts INT := 0;
+BEGIN
+  SELECT account_id INTO existing FROM public.profiles WHERE id = uid;
+  IF existing IS NOT NULL THEN RETURN existing; END IF;
+
+  LOOP
+    new_id := lpad((100000 + floor(random() * 900000))::INT::TEXT, 6, '0');
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE account_id = new_id);
+    attempts := attempts + 1;
+    IF attempts > 50 THEN RAISE EXCEPTION 'Could not allocate unique account_id'; END IF;
+  END LOOP;
+
+  UPDATE public.profiles SET account_id = new_id WHERE id = uid;
+  INSERT INTO public.wallets (user_id, balance) VALUES (uid, 0) ON CONFLICT DO NOTHING;
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Award points for an activity ('post' = +20, 'comment' = +50, 'friend' = +10).
+-- Credits the wallet, the profiles.points snapshot, and the point_events audit log.
+CREATE OR REPLACE FUNCTION public.award_points(uid UUID, reason TEXT, amount BIGINT)
+RETURNS BIGINT AS $$
+DECLARE
+  new_balance BIGINT;
+BEGIN
+  INSERT INTO public.wallets (user_id, balance) VALUES (uid, 0) ON CONFLICT DO NOTHING;
+  UPDATE public.wallets SET balance = balance + amount WHERE user_id = uid RETURNING balance INTO new_balance;
+  UPDATE public.profiles SET points = new_balance WHERE id = uid;
+  INSERT INTO public.point_events (user_id, reason, amount) VALUES (uid, reason, amount);
+  RETURN new_balance;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Set (or change) the caller's 4-digit transaction PIN.
+CREATE OR REPLACE FUNCTION public.set_points_pin(pin TEXT)
+RETURNS VOID AS $$
+BEGIN
+  IF char_length(pin) <> 4 OR pin !~ '^\d{4}$' THEN
+    RAISE EXCEPTION 'PIN harus 4 digit angka.';
+  END IF;
+  UPDATE public.profiles SET points_pin = public.hash_pin(pin) WHERE id = auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Transfer points from the caller to another user's account_id.
+-- Validates the sender's PIN and sufficient balance. Returns a JSON result.
+CREATE OR REPLACE FUNCTION public.transfer_points(to_account_id TEXT, amount BIGINT, pin TEXT)
+RETURNS JSON AS $$
+DECLARE
+  me UUID := auth.uid();
+  my_pin TEXT;
+  my_balance BIGINT;
+  recipient_id UUID;
+BEGIN
+  IF amount <= 0 THEN RAISE EXCEPTION 'Nominal harus lebih dari 0.'; END IF;
+  IF char_length(pin) <> 4 OR pin !~ '^\d{4}$' THEN RAISE EXCEPTION 'PIN harus 4 digit angka.'; END IF;
+  IF me IS NULL THEN RAISE EXCEPTION 'Tidak terautentikasi.'; END IF;
+  IF to_account_id IS NULL OR to_account_id = '' THEN RAISE EXCEPTION 'QR tujuan tidak valid.'; END IF;
+
+  SELECT points_pin INTO my_pin FROM public.profiles WHERE id = me;
+  IF my_pin IS NULL THEN RAISE EXCEPTION 'Anda belum mengatur PIN transaksi.'; END IF;
+  IF my_pin <> public.hash_pin(pin) THEN RAISE EXCEPTION 'PIN salah.'; END IF;
+
+  SELECT id INTO recipient_id FROM public.profiles WHERE account_id = to_account_id;
+  IF recipient_id IS NULL THEN RAISE EXCEPTION 'Akun tujuan tidak ditemukan.'; END IF;
+  IF recipient_id = me THEN RAISE EXCEPTION 'Tidak bisa transfer ke akun sendiri.'; END IF;
+
+  SELECT balance INTO my_balance FROM public.wallets WHERE user_id = me;
+  IF my_balance IS NULL THEN my_balance := 0; END IF;
+  IF my_balance < amount THEN RAISE EXCEPTION 'Poin tidak cukup. Saldo: %', my_balance; END IF;
+
+  UPDATE public.wallets SET balance = balance - amount WHERE user_id = me;
+  INSERT INTO public.wallets (user_id, balance) VALUES (recipient_id, 0) ON CONFLICT DO NOTHING;
+  UPDATE public.wallets SET balance = balance + amount WHERE user_id = recipient_id;
+  UPDATE public.profiles SET points = (SELECT balance FROM public.wallets WHERE user_id = me) WHERE id = me;
+  UPDATE public.profiles SET points = (SELECT balance FROM public.wallets WHERE user_id = recipient_id) WHERE id = recipient_id;
+  INSERT INTO public.transactions (from_id, to_id, amount) VALUES (me, recipient_id, amount);
+
+  RETURN json_build_object('ok', true, 'amount', amount, 'to', recipient_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- ==========================================
+-- 6. AUTO-CREATE PROFILE TRIGGER
 -- ==========================================
 
 -- Function to automatically create a profile when a new user signs up
@@ -233,10 +376,13 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$ BEGIN
   INSERT INTO public.profiles (id, full_name, avatar_url)
   VALUES (
-    NEW.id, 
-    COALESCE(NEW.raw_user_meta_data->>'full_name', 'New Goat'), 
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', 'New Goat'),
     'https://api.dicebear.com/7.x/avataaars/svg?seed=' || NEW.id
   );
+  -- Seed the wallet and a unique 6-digit account_id right away.
+  INSERT INTO public.wallets (user_id, balance) VALUES (NEW.id, 0) ON CONFLICT DO NOTHING;
+  PERFORM public.ensure_account_id(NEW.id);
   RETURN NEW;
 END;
  $$ LANGUAGE plpgsql SECURITY DEFINER;
