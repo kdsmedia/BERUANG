@@ -14,14 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.outlined.Mood
-import androidx.compose.material.icons.outlined.SentimentSatisfied
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,15 +26,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.beruang.R
-import com.altomedia.beruang.ui.components.EmojiPickerSheet
 import com.altomedia.beruang.ui.components.EmptyState
-import com.altomedia.beruang.ui.components.FeelingPickerSheet
 import com.altomedia.beruang.ui.components.PullToRefreshLayout
 import com.altomedia.beruang.ui.components.clickableNoRipple
 import com.altomedia.beruang.ui.components.outlinedFieldColors
 import com.altomedia.beruang.ui.feed.PostCard
 import com.altomedia.beruang.ui.theme.*
-import com.altomedia.beruang.util.Feeling
 
 @Composable
 fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
@@ -52,11 +46,7 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
     val notifUnread by badgesVm.notifUnread.collectAsStateWithLifecycle()
 
     var composerText by remember { mutableStateOf("") }
-    var feeling by remember { mutableStateOf<Feeling?>(null) }
     var activeTab by remember { mutableStateOf("foryou") }
-
-    var showEmoji by remember { mutableStateOf(false) }
-    var showFeeling by remember { mutableStateOf(false) }
 
     val snackbarHost = remember { SnackbarHostState() }
     LaunchedEffect(toast) { toast?.let { snackbarHost.showSnackbar(it); vm.toastShown() } }
@@ -76,16 +66,11 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
             item {
                 Composer(
                     text = composerText, onText = { composerText = it },
-                    feeling = feeling,
-                    onFeeling = { showFeeling = true },
-                    onEmoji = { showEmoji = true },
-                    onClearFeeling = { feeling = null },
                     onPost = {
-                        val feelingText = feeling?.let { "${it.emoji} is feeling ${it.label}" } ?: ""
-                        val content = listOf(composerText.trim(), feelingText).filter { it.isNotBlank() }.joinToString("\n")
+                        val content = composerText.trim()
                         if (content.isBlank()) return@Composer
                         vm.createPost(content)
-                        composerText = ""; feeling = null
+                        composerText = ""
                     }
                 )
             }
@@ -122,9 +107,6 @@ fun HomeScreen(vm: HomeViewModel = hiltViewModel(), onAlerts: () -> Unit = {}) {
             }
         }
     }
-
-    if (showEmoji) EmojiPickerSheet(onInsert = { composerText += it }, onDismiss = { showEmoji = false })
-    if (showFeeling) FeelingPickerSheet(onPick = { feeling = it }, onDismiss = { showFeeling = false })
 }
 
 @Composable
@@ -166,9 +148,6 @@ private fun HomeTopBar(notifUnread: Int, onAlerts: () -> Unit) {
 @Composable
 private fun Composer(
     text: String, onText: (String) -> Unit,
-    feeling: Feeling?,
-    onFeeling: () -> Unit, onEmoji: () -> Unit,
-    onClearFeeling: () -> Unit,
     onPost: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth().background(Surface).padding(14.dp)) {
@@ -179,18 +158,8 @@ private fun Composer(
             colors = outlinedFieldColors(),
             shape = RoundedCornerShape(12.dp)
         )
-        if (feeling != null) {
-            Row(Modifier.padding(top = 8.dp)) {
-                Tag("${feeling.emoji} is feeling ${feeling.label}", GoldSoft, Gold, onClearFeeling)
-            }
-        }
         HorizontalDivider(color = Line, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row {
-                ComposerChip("Feeling", Icons.Outlined.Mood, Gold, onFeeling)
-                Spacer(Modifier.width(8.dp))
-                ComposerChip("Emoji", Icons.Outlined.SentimentSatisfied, GreenBright, onEmoji)
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             Button(
                 onClick = onPost,
                 colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = androidx.compose.ui.graphics.Color.White),
@@ -204,30 +173,6 @@ private fun Composer(
         }
     }
     HorizontalDivider(color = Line, thickness = 6.dp)
-}
-
-@Composable
-private fun ComposerChip(label: String, icon: ImageVector, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Row(
-        Modifier.clip(RoundedCornerShape(50)).background(Surface2).clickable { onClick() }.padding(horizontal = 10.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = Text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun Tag(text: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color, onClear: () -> Unit) {
-    Row(
-        Modifier.clip(RoundedCornerShape(50)).background(bg).padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.width(6.dp))
-        Text("✕", color = fg, fontSize = 12.sp, modifier = Modifier.clickable { onClear() })
-    }
 }
 
 @Composable

@@ -99,7 +99,6 @@ private fun GlobalTab(vm: MessagesViewModel) {
     val profs by vm.globalProfiles.collectAsStateWithLifecycle()
     val myUid = androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.profile.SessionViewModel>().uid.collectAsStateWithLifecycle().value
     var text by remember { mutableStateOf("") }
-    var showEmoji by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     Column(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
@@ -119,13 +118,12 @@ private fun GlobalTab(vm: MessagesViewModel) {
             }
         }
         LaunchedEffect(msgs.size) { if (msgs.isNotEmpty()) listState.animateScrollToItem(msgs.size - 1) }
-        InputBar(text, onText = { text = it }, onEmoji = { showEmoji = true }, onSend = { if (text.isNotBlank()) { vm.sendGlobal(text); text = "" } })
+        InputBar(text, onText = { text = it }, onSend = { if (text.isNotBlank()) { vm.sendGlobal(text); text = "" } })
     }
-    if (showEmoji) com.altomedia.beruang.ui.components.EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })
 }
 
 @Composable
-fun InputBar(text: String, onText: (String) -> Unit, onEmoji: () -> Unit, onSend: () -> Unit) {
+fun InputBar(text: String, onText: (String) -> Unit, onSend: () -> Unit) {
     Surface(color = Surface, shadowElevation = 4.dp) {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -135,7 +133,6 @@ fun InputBar(text: String, onText: (String) -> Unit, onEmoji: () -> Unit, onSend
                 colors = outlinedFieldColors(), shape = RoundedCornerShape(50)
             )
             Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onEmoji) { Text("😀", fontSize = 22.sp) }
             IconButton(onClick = onSend) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "send", tint = Green) }
         }
     }

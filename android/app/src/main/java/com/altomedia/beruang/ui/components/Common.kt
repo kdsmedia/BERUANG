@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -142,3 +143,11 @@ fun PullToRefreshLayout(
         Box(Modifier.offset { IntOffset(0, shown.roundToInt()) }) { content() }
     }
 }
+
+@Composable
+fun outlinedFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = Surface2, unfocusedContainerColor = Surface2,
+    focusedBorderColor = Green, unfocusedBorderColor = Line,
+    focusedTextColor = Text, unfocusedTextColor = Text,
+    cursorColor = Green
+)

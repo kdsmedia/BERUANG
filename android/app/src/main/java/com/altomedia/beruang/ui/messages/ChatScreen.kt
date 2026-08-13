@@ -29,7 +29,6 @@ fun ChatScreen(partnerUid: String, onBack: () -> Unit, vm: MessagesViewModel = h
     val thread by vm.thread.collectAsStateWithLifecycle()
     val myUid by androidx.hilt.navigation.compose.hiltViewModel<com.altomedia.beruang.ui.profile.SessionViewModel>().uid.collectAsStateWithLifecycle()
     var text by remember { mutableStateOf("") }
-    var showEmoji by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -68,8 +67,7 @@ fun ChatScreen(partnerUid: String, onBack: () -> Unit, vm: MessagesViewModel = h
                 }
                 LaunchedEffect(thread.size) { if (thread.isNotEmpty()) listState.animateScrollToItem(thread.size - 1) }
             }
-            com.altomedia.beruang.ui.messages.InputBar(text, onText = { text = it }, onEmoji = { showEmoji = true }, onSend = { if (text.isNotBlank()) { vm.send(partnerUid, text); text = "" } })
+            com.altomedia.beruang.ui.messages.InputBar(text, onText = { text = it }, onSend = { if (text.isNotBlank()) { vm.send(partnerUid, text); text = "" } })
         }
     }
-    if (showEmoji) com.altomedia.beruang.ui.components.EmojiPickerSheet(onInsert = { text += it }, onDismiss = { showEmoji = false })
 }
