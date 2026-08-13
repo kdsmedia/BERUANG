@@ -4,6 +4,7 @@ import com.altomedia.beruang.data.model.Profile
 import com.altomedia.beruang.data.model.Transaction
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import android.util.Log
 import kotlinx.coroutines.tasks.await
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -77,8 +78,14 @@ class AccountsRepository @Inject constructor(
 
     /** Awards points to a user (used on post/comment/friend). Writes to wallets. */
     suspend fun awardPoints(userId: String, amount: Long) {
-        val current = getBalance(userId)
-        wallets.document(userId).set(WalletDoc(balance = current + amount)).await()
+        try {
+            val current = getBalance(userId)
+            wallets.document(userId).set(WalletDoc(balance = current + amount)).await()
+        } catch (e: Exception) {
+            // Best-effort: never let a reward failure break the user's action,
+            // but log it so silent rule/permission regressions are visible.
+            Log.w("AccountsRepo", "awardPoints failed (uid=$userId, +$amount)", e)
+        }
     }
 
     /** Looks up a profile by its 6-digit account_id (used after QR scan). */
@@ -98,7 +105,6 @@ class AccountsRepository @Inject constructor(
         if (pin.length != 4 || !pin.all { it.isDigit() }) return TransferResult.Error("PIN harus 4 digit angka.")
         val me = uid()
         if (toAccountId.isBlank()) return TransferResult.Error("QR tujuan tidak valid.")
-        if (toAccountId == me) return TransferResult.Error("Tidak bisa transfer ke akun sendiri.")
 
         val myProfileSnap = profiles.document(me).get().await()
         val myProfile = myProfileSnap.toObject(Profile::class.java)?.copy(id = me)

@@ -22,6 +22,7 @@ data class ProfileUiState(
     val friendIds: List<String> = emptyList(),
     val friendProfiles: List<Profile> = emptyList(),
     val hasPin: Boolean = false,
+    val transferring: Boolean = false,
     val loading: Boolean = true,
     val toast: String? = null
 )
@@ -87,6 +88,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun transfer(toAccountId: String, amount: Long, pin: String) = viewModelScope.launch {
+        _state.value = _state.value.copy(transferring = true)
         try {
             when (val r = accounts.transfer(toAccountId, amount, pin)) {
                 is TransferResult.Success -> {
@@ -97,6 +99,7 @@ class ProfileViewModel @Inject constructor(
                 is TransferResult.Error -> _state.value = _state.value.copy(toast = r.message)
             }
         } catch (e: Exception) { _state.value = _state.value.copy(toast = "Transfer gagal: ${e.message}") }
+        finally { _state.value = _state.value.copy(transferring = false) }
     }
 
     fun toastShown() { _state.value = _state.value.copy(toast = null) }

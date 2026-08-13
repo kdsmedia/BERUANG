@@ -67,7 +67,13 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
     var showMyQr by remember { mutableStateOf(false) }
     var scanning by remember { mutableStateOf(false) }
     var scannedAccountId by remember { mutableStateOf<String?>(null) }
-    var transferBusy by remember { mutableStateOf(false) }
+    // Close the transfer dialog exactly when the async transfer finishes
+    // (success or error), so the spinner is meaningful and the toast lands.
+    var prevTransferring by remember { mutableStateOf(false) }
+    LaunchedEffect(s.transferring) {
+        if (prevTransferring && !s.transferring) scannedAccountId = null
+        prevTransferring = s.transferring
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -215,17 +221,14 @@ fun ProfileScreen(uid: String?, vm: ProfileViewModel = hiltViewModel()) {
         TransferDialog(
             recipientAccountId = target,
             hasPin = s.hasPin,
-            busy = transferBusy,
-            onDismiss = { scannedAccountId = null },
+            busy = s.transferring,
+            onDismiss = { if (!s.transferring) scannedAccountId = null },
             onCreatePin = { pin ->
                 vm.setPin(pin)
                 scannedAccountId = null // PIN dibuat; scan ulang untuk transfer
             },
             onTransfer = { amount, pin ->
-                transferBusy = true
                 vm.transfer(target, amount, pin)
-                scannedAccountId = null
-                transferBusy = false
             }
         )
     }

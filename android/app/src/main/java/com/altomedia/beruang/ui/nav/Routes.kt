@@ -25,7 +25,6 @@ object Routes {
     const val Profile = "profile"
     const val Chat = "chat/{uid}"
     const val ProfileView = "profileView/{uid}"
-    const val QrScanner = "qrScanner"
     fun chat(uid: String) = "chat/$uid"
     fun profileView(uid: String) = "profileView/$uid"
 }
