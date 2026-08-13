@@ -27,7 +27,7 @@ class ProfileRepository @Inject constructor(
         val fallback = Profile(
             id = uid,
             full_name = auth.currentUser?.displayName ?: "New Goat",
-            bio = "Hey there! I am using JavaGoat.",
+            bio = "Hey there! I am using BERUANG.",
             avatar_url = Profile.dicebearAvatar(uid)
         )
         profiles.document(uid).set(fallback).await()

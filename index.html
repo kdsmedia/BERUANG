@@ -568,7 +568,7 @@ async function loadMyProfile(){
   else {
     // trigger should have created it; create manually as fallback (RLS: own id)
     const fallback = { id: sessionUser.id, full_name: sessionUser.user_metadata?.full_name || 'New Goat',
-      bio: "Hey there! I am using JavaGoat.",
+      bio: "Hey there! I am using BERUANG.",
       avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sessionUser.id}`,
       cover_url: null, created_at: new Date().toISOString() };
     const { data: ins } = await safeQuery(()=> db.from('profiles').insert(fallback).select().maybeSingle());

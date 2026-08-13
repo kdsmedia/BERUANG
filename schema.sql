@@ -17,7 +17,7 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
-  bio TEXT DEFAULT 'Hey there! I am using JavaGoat.',
+  bio TEXT DEFAULT 'Hey there! I am using BERUANG.',
   avatar_url TEXT,
   cover_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

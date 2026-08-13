@@ -7,7 +7,7 @@ import com.google.firebase.firestore.ServerTimestamp
 data class Profile(
     @DocumentId val id: String = "",
     val full_name: String? = null,
-    val bio: String? = "Hey there! I am using JavaGoat.",
+    val bio: String? = "Hey there! I am using BERUANG.",
     val avatar_url: String? = null,
     val cover_url: String? = null,
     val phone: String? = null,
