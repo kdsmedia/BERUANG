@@ -1,13 +1,13 @@
 # BERUANG — repo notes
 
-Native Android social app (Jetpack Compose + Firebase). The repo is Android-only.
+Native Android social app (Jetpack Compose + Supabase). The repo is Android-only.
 
 ## Android app (`android/`)
-- Package: `com.altomedia.beruang`; Firebase project `altomedia-indonesia` (Storage bucket `altomedia-indonesia.firebasestorage.app`).
-- `google-services.json` is committed under `android/app/`.
-- Stack: Kotlin 1.9.24, AGP 8.10.1, Gradle 8.11.1, Hilt 2.51.1, KSP 1.9.24-1.0.20, Compose + material-icons-extended, Firebase (Auth/Firestore/Storage), Coil, navigation-compose, lifecycle-viewmodel-compose. compileSdk/targetSdk 37, minSdk 21, versionCode 4, versionName 1.2.0.
-- Firebase security rules: `android/app/firestore.rules` and `android/app/storage.rules` (users read/write own rows; posts/likes/comments/stories/global_messages/groups are public-read; notifications readable by owner; friendships bilateral; wallets readable, wallets.update open to any signed-in user for P2P transfer; transactions readable by sender/recipient). Deploy via `firebase deploy --only firestore:rules,storage`.
-- Build env: `ANDROID_HOME` set to an Android SDK with `platforms;android-37.0`, `build-tools;37.0.0`, `platform-tools`; `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` (JDK 21). `local.properties` points `sdk.dir` at the SDK.
+- Package: `com.altomedia.beruang`; developer **ALTOMEDIA** (contact `altomediaindonesia@gmail.com`).
+- **Backend = Supabase** (was Firebase; migrated). The Firebase config (`google-services.json`, `firestore.rules`, `storage.rules`, `FirebaseModule.kt`) has been removed. Schema: `android/supabase/schema.sql`.
+- Stack: Kotlin 1.9.24, AGP 8.10.1, Gradle 8.11.1, Hilt 2.51.1, KSP 1.9.24-1.0.20, Compose + material-icons-extended, **Supabase** (postgrest-kt/gotrue-kt/realtime-kt 2.5.2 + Ktor 2.3.12 OkHttp engine), Coil, navigation-compose, lifecycle-viewmodel-compose. compileSdk/targetSdk 37, minSdk 21, versionCode 4, versionName 1.2.0.
+- Supabase RLS mirrors the old Firestore rules (users read/write own rows; posts/likes/comments/stories/global_messages/groups public-read; notifications readable by owner; friendships bilateral). `wallets` writes are blocked by RLS, so point transfers go through security-definer RPCs (`transfer_points`, `award_points`) in `schema.sql`.
+- Build env: `ANDROID_HOME` set to an Android SDK with `platforms;android-37.0` (symlinked as `android-37` for AGP), `build-tools;37.0.0`, `platform-tools`; `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` (JDK 21). `local.properties` points `sdk.dir` at the SDK.
 - Release signing: `ALTOMEDIA.jks` (alias `kdsmedia`, password `Kdsmedia@123`), located at `ALTOMEDIA/keystore/`. Credentials read from `android/keystore.properties` (gitignored). DN: `CN=ALTOMEDIA, OU=Developer, O=ALTOMEDIA, L=Karawang, ST=Jawa Barat, C=ID`, validity 10000 days.
 
 ### Build
@@ -17,8 +17,30 @@ export ANDROID_HOME=<sdk> JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ./gradlew :app:assembleDebug --no-daemon          # debug APK
 ./gradlew :app:assembleRelease :app:bundleRelease --no-daemon  # signed release APK + AAB
 ```
-- All three variants build with zero errors (only minor deprecation/unused-param warnings). `:app:lintDebug` passes with no errors.
+- `:app:assembleDebug` builds with zero errors (debug APK ~34 MB). `:app:lintDebug` passes with no errors.
 - Outputs: `android/app/build/outputs/apk/debug/app-debug.apk`, `.../apk/release/app-release.apk`, `.../bundle/release/app-release.aab`. Release artifacts are signed with the ALTOMEDIA keystore.
+
+### Supabase migration notes (replaces the Firebase backend)
+- `SupabaseModule.kt` (Hilt) provides `SupabaseClient`, `Auth` (gotrue), and `Realtime` singletons; installs Postgrest+Auth+Realtime plugins. Only the anon/publishable key is used client-side.
+- Repositories inject **`SupabaseClient`** and derive `auth`/`postgrest`/`realtime` via the gotrue/postgrest/realtime **extension accessors** (`io.github.jan.supabase.gotrue.auth`, `io.github.jan.supabase.postgrest.postgrest`, `io.github.jan.supabase.realtime.realtime`, `.channel`).
+- **Critical KSP/Hilt note (do not regress):** do NOT inject `Postgrest` and `Auth` together as separate `@Inject constructor` params in the same repository. KSP1 fails to resolve `io.github.jan.supabase.gotrue.Auth` in that combined signature and emits `error.NonExistentClass` for the `Auth` param (while `Postgrest` alone resolves fine). The `SupabaseClient`-only injection pattern works around this. ViewModels inject `Auth` or `Realtime` alone (never combined with `Postgrest`), so they don't hit the bug. KSP2 was tried and reverted (hits a separate `KSTypeArgument STAR null` bug).
+- Auth = gotrue **Email/Password**; the synthetic `08…@beruang.phone` email trick from the Firebase build still applies (`AuthViewModel.normalizePhone`).
+- Models are `@Serializable`; timestamps are ISO-8601 strings (`TimeUtil.isoNow()` replaces `Firebase.Timestamp.now()`).
+- Realtime change flows: `channel.postgresChangeFlow<T>("public"){ table = ... }` after a `channel.subscribe()` (suspend), so the `*Changes()` repo methods are `suspend` and return a `Flow<PostgresAction>`.
+- KSP2 was attempted (hits `KSTypeArgument.type should not have been null, STAR null`) and **reverted to KSP1**; `gradle.properties` keeps `org.gradle.jvmargs=-Xmx4096m`, `kotlin.daemon.jvmargs=-Xmx2g` (no KSP2 line).
+
+### Build env re-provision (fresh container)
+The JDK + Android SDK are not baked in; re-install on a fresh container:
+```
+sudo apt-get install -y openjdk-21-jdk-headless unzip
+mkdir -p /home/openhands/android-sdk/cmdline-tools && cd $_
+# download commandlinetools-linux-11076708_latest.zip, unzip, mv cmdline-tools latest
+export ANDROID_HOME=/home/openhands/android-sdk JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+yes | sdkmanager --licenses
+sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+ln -s /home/openhands/android-sdk/platforms/android-37.0 /home/openhands/android-sdk/platforms/android-37
+```
 
 ### Firestore collections
 `profiles`, `posts`, `likes`, `comments`, `stories`, `messages`, `global_messages`, `friendships`, `groups`, `group_members`, `notifications`, `wallets`, `transactions`.
