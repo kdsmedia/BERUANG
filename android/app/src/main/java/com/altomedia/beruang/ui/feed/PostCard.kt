@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,7 +52,6 @@ fun PostCard(
     var commentText by remember { mutableStateOf("") }
     val profilesVm: com.altomedia.beruang.ui.profile.SessionViewModel = hiltViewModel()
     val currentUid by profilesVm.uid.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(Modifier.fillMaxWidth().background(Surface).padding(vertical = 8.dp)) {
         // Header
@@ -83,19 +81,6 @@ fun PostCard(
                     Column(Modifier.padding(4.dp)) {
                         if (currentUid == post.user_id) {
                             DropdownItem("Delete", Icons.Filled.Delete, Danger) { menuOpen = false; onDeletePost() }
-                        }
-                        DropdownItem("Share", Icons.Outlined.Share, Text) {
-                            menuOpen = false
-                            val shareText = buildString {
-                                append(item.author.displayName); append(": ")
-                                post.content?.let { append(it); append("\n") }
-                                append("\nShared from BERUANG")
-                            }
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(android.content.Intent.createChooser(intent, "Share post"))
                         }
                         DropdownItem("Cancel", Icons.Filled.Close, Muted) { menuOpen = false }
                     }
@@ -129,20 +114,6 @@ fun PostCard(
             }
             IconButton(onClick = onToggleComments, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.AutoMirrored.Outlined.Comment, contentDescription = "comment", tint = Text)
-            }
-            IconButton(onClick = {
-                val shareText = buildString {
-                    append(item.author.displayName); append(": ")
-                    post.content?.let { append(it); append("\n") }
-                    append("\nShared from BERUANG")
-                }
-                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                }
-                context.startActivity(android.content.Intent.createChooser(intent, "Share post"))
-            }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Outlined.Share, contentDescription = "share", tint = Text)
             }
             Spacer(Modifier.weight(1f))
         }
