@@ -1,11 +1,10 @@
 package com.altomedia.beruang.data.model
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.ServerTimestamp
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Profile(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val full_name: String? = null,
     val bio: String? = "Hey there! I am using BERUANG.",
     val avatar_url: String? = null,
@@ -16,7 +15,7 @@ data class Profile(
     val points: Long = 0,
     val points_pin: String? = null, // SHA-256 hash of the 4-digit PIN
     val account_id: String? = null, // 6-digit virtual account number
-    @ServerTimestamp val created_at: Timestamp? = null
+    val created_at: String? = null
 ) {
     val displayName get() = full_name ?: "New Goat"
     /** True when the avatar is one of the bundled presets (stored as "preset:<key>"). */

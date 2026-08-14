@@ -1,36 +1,38 @@
 package com.altomedia.beruang.data.model
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.ServerTimestamp
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Post(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val user_id: String = "",
     val content: String? = null,
     val image_url: String? = null,
     val video_url: String? = null,
     val location: String? = null,
-    @ServerTimestamp val created_at: Timestamp? = null
+    val created_at: String? = null
 )
 
+@Serializable
 data class Like(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val post_id: String = "",
     val user_id: String = ""
 )
 
+@Serializable
 data class Comment(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val post_id: String = "",
     val user_id: String = "",
     val content: String = "",
-    @ServerTimestamp val created_at: Timestamp? = null
+    val created_at: String? = null
 )
 
+@Serializable
 data class Story(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val user_id: String = "",
     val image_url: String = "",
-    @ServerTimestamp val created_at: Timestamp? = null
+    val created_at: String? = null
 )

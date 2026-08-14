@@ -4,7 +4,8 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
@@ -47,12 +48,14 @@ android {
         }
     }
     compileOptions {
+        // Supabase-kt uses java.time APIs; on minSdk 21 we need core library
+        // desugaring so java.time is available below API 26.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
@@ -86,12 +89,22 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-svg:2.6.0")
 
-    // Firebase BoM (32.x keeps firebase-auth 22.x which supports minSdk 21;
-    // BoM 33.x pulls firebase-auth 23.0.0 which requires minSdk 23)
-    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    // Note: firebase-storage removed — media now stored in device local storage.
+    // Supabase (Postgrest + Auth + Realtime). Umbrella pulls all modules.
+    // 2.5.2 targets Kotlin 2.0; Ktor 2.3.12 engine is the Android (OkHttp) client
+    // which supports the WebSockets Realtime needs.
+    val supabaseVersion = "2.5.2"
+    implementation("io.github.jan-tennert.supabase:supabase-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:$supabaseVersion")
+    implementation("io.ktor:ktor-client-android:2.3.12")
+
+    // Serialization (Supabase decodes JSON rows into @Serializable models)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+
+    // Core library desugaring so java.time works on minSdk 21
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
     // QR code generation (ZXing core, no Android-specific deps)
     implementation("com.google.zxing:core:3.5.3")

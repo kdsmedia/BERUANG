@@ -8,6 +8,7 @@ import com.altomedia.beruang.data.model.Profile
 import com.altomedia.beruang.data.repo.FeedRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,8 @@ data class FeedItem(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val feed: FeedRepository,
-    private val profiles: ProfileRepository
+    private val profiles: ProfileRepository,
+    private val realtime: Realtime
 ) : ViewModel() {
 
     private val _items = MutableStateFlow<List<FeedItem>>(emptyList())
@@ -49,7 +51,20 @@ class HomeViewModel @Inject constructor(
 
     fun toastShown() { _toast.value = null }
 
-    init { refresh() }
+    init {
+        refresh()
+        // Real-time: reload the feed whenever a post, like, or comment changes
+        // so the home feed updates live (new posts, like counts, comments).
+        viewModelScope.launch {
+            runCatching {
+                kotlinx.coroutines.flow.merge(
+                    feed.feedChanges(realtime),
+                    feed.likeChanges(realtime),
+                    feed.commentChanges(realtime),
+                ).collect { refresh() }
+            }
+        }
+    }
 
     fun refresh() = viewModelScope.launch {
         _loading.value = true
@@ -87,7 +102,7 @@ class HomeViewModel @Inject constructor(
                 id = "local-${System.currentTimeMillis()}",
                 user_id = me.id,
                 content = text,
-                created_at = com.google.firebase.Timestamp.now()
+                created_at = com.altomedia.beruang.data.isoNow()
             )
             _items.value = listOf(FeedItem(optimisticPost, me, 0, false)) + _items.value
         }

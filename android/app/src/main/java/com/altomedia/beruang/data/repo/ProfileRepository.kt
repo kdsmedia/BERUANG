@@ -1,36 +1,38 @@
 package com.altomedia.beruang.data.repo
 
 import com.altomedia.beruang.data.model.Profile
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ProfileRepository @Inject constructor(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val client: SupabaseClient
 ) {
-    private val profiles = db.collection("profiles")
+    private val auth: Auth get() = client.auth
+    private val postgrest: Postgrest get() = client.postgrest
+    private val table get() = postgrest.from("profiles")
     private val cache = HashMap<String, Profile>()
 
-    val currentUid get() = auth.currentUser?.uid
+    val currentUid get() = auth.currentUserOrNull()?.id
     private var currentProfile: Profile? = null
 
     suspend fun loadMyProfile(): Profile? {
         val uid = currentUid ?: return null
-        val snap = profiles.document(uid).get().await()
-        val p = snap.toObject(Profile::class.java)?.copy(id = uid)
+        val p = runCatching { table.select { filter { eq("id", uid) } }.decodeSingle<Profile>() }.getOrNull()
         if (p != null) { currentProfile = p; cache[uid] = p; return p }
-        // trigger fallback if missing
+        // fallback if missing (trigger should have created it; safety net)
         val fallback = Profile(
             id = uid,
-            full_name = auth.currentUser?.displayName ?: "New Goat",
+            full_name = "New Goat",
             bio = "Hey there! I am using BERUANG.",
             avatar_url = Profile.dicebearAvatar(uid)
         )
-        profiles.document(uid).set(fallback).await()
+        table.upsert(fallback, onConflict = "id")
         currentProfile = fallback; cache[uid] = fallback
         return fallback
     }
@@ -39,18 +41,18 @@ class ProfileRepository @Inject constructor(
 
     suspend fun get(uid: String): Profile {
         cache[uid]?.let { return it }
-        val snap = profiles.document(uid).get().await()
-        val p = snap.toObject(Profile::class.java)?.copy(id = uid)
+        val p = runCatching { table.select { filter { eq("id", uid) } }.decodeSingle<Profile>() }.getOrNull()
             ?: Profile(id = uid, full_name = "User", avatar_url = Profile.dicebearAvatar(uid))
         cache[uid] = p
         return p
     }
 
     suspend fun list(limit: Int = 60): List<Profile> {
-        val snaps = profiles.limit(limit.toLong()).get().await()
-        return snaps.documents.mapNotNull {
-            it.toObject(Profile::class.java)?.copy(id = it.id)?.also { p -> cache[p.id] = p }
-        }
+        val rows = runCatching {
+            table.select { limit(limit.toLong()) }.decodeList<Profile>()
+        }.getOrDefault(emptyList())
+        rows.forEach { p -> cache[p.id] = p }
+        return rows
     }
 
     suspend fun update(
@@ -58,12 +60,7 @@ class ProfileRepository @Inject constructor(
         phone: String? = null, email: String? = null, gender: String? = null
     ): Profile? {
         val uid = currentUid ?: return null
-        // Use set+merge (upsert) instead of update() so editing works even when
-        // the profile document doesn't exist yet (update() throws on a missing
-        // doc, which was breaking Edit Profile).
-        val base = cache[uid] ?: runCatching { profiles.document(uid).get().await() }
-            .getOrNull()?.toObject(Profile::class.java)?.copy(id = uid)
-        // Treat email as "clear" only when explicitly set to empty; null means "leave unchanged".
+        val base = cache[uid] ?: runCatching { table.select { filter { eq("id", uid) } }.decodeSingle<Profile>() }.getOrNull()
         val emailVal = email?.ifBlank { null }
         val merged = (base ?: Profile(id = uid)).copy(
             full_name = name ?: (base?.full_name),
@@ -73,7 +70,7 @@ class ProfileRepository @Inject constructor(
             email = emailVal ?: (base?.email),
             gender = gender ?: (base?.gender)
         )
-        profiles.document(uid).set(merged, com.google.firebase.firestore.SetOptions.merge()).await()
+        table.upsert(merged, onConflict = "id")
         cache[uid] = merged
         currentProfile = merged
         return merged

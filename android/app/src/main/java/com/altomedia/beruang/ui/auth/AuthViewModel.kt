@@ -5,23 +5,30 @@ import androidx.lifecycle.viewModelScope
 import com.altomedia.beruang.data.repo.AuthError
 import com.altomedia.beruang.data.repo.AuthRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepo: AuthRepository,
-    private val profileRepo: ProfileRepository
+    private val profileRepo: ProfileRepository,
+    private val auth: Auth
 ) : ViewModel() {
 
-    private val _session = MutableStateFlow(FirebaseAuth.getInstance().currentUser)
-    val session: StateFlow<FirebaseUser?> = _session.asStateFlow()
+    /** The current user's id, or null when signed out. Driven by the Supabase
+     *  session status flow so login/logout reflects immediately. */
+    val session: StateFlow<String?> = auth.sessionStatus
+        .map { (it as? SessionStatus.Authenticated)?.session?.user?.id }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -31,14 +38,6 @@ class AuthViewModel @Inject constructor(
 
     private val _info = MutableStateFlow<String?>(null)
     val info: StateFlow<String?> = _info.asStateFlow()
-
-    private val authListener = FirebaseAuth.AuthStateListener { _session.value = it.currentUser }
-
-    init { FirebaseAuth.getInstance().addAuthStateListener(authListener) }
-
-    override fun onCleared() {
-        FirebaseAuth.getInstance().removeAuthStateListener(authListener)
-    }
 
     fun login(phone: String, pass: String) = viewModelScope.launch {
         _loading.value = true; _error.value = null; _info.value = null
@@ -74,7 +73,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    /** Returns a synthetic email used for Firebase Email/Password auth (no OTP needed). */
+    /** Returns a synthetic email used for Supabase Email/Password auth (no OTP needed). */
     private fun pseudoEmail(phone: String): String {
         val n = normalizePhone(phone)
         require(n.startsWith("08") && n.length in 9..14) { "Nomor HP harus diawali 08." }

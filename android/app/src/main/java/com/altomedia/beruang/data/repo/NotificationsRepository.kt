@@ -1,43 +1,56 @@
 package com.altomedia.beruang.data.repo
 
 import com.altomedia.beruang.data.model.Notification
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class NotificationsRepository @Inject constructor(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val client: SupabaseClient
 ) {
-    private val notifs = db.collection("notifications")
-    private fun uid() = auth.currentUser?.uid ?: throw IllegalStateException("Not signed in")
+    private val auth: Auth get() = client.auth
+    private val postgrest: Postgrest get() = client.postgrest
+    private val notifs get() = postgrest.from("notifications")
+    private fun uid() = auth.currentUserOrNull()?.id ?: throw IllegalStateException("Not signed in")
 
-    suspend fun list(): List<Notification> {
-        // whereEqualTo("user_id") + orderBy("created_at") needs a composite
-        // index; fetch plain and sort in memory so notifications always load.
-        val snap = notifs.whereEqualTo("user_id", uid()).limit(80).get().await()
-        return snap.documents.mapNotNull { it.toObject(Notification::class.java)?.copy(id = it.id) }
-            .sortedByDescending { it.created_at?.seconds ?: 0 }
-    }
+    suspend fun list(): List<Notification> =
+        runCatching {
+            notifs.select { filter { eq("user_id", uid()) }; order("created_at", Order.DESCENDING) }.decodeList<Notification>()
+        }.getOrDefault(emptyList())
 
-    suspend fun unreadCount(): Int {
-        val snap = notifs.whereEqualTo("user_id", uid()).whereEqualTo("read", false).get().await()
-        return snap.size()
+    suspend fun unreadCount(): Int =
+        runCatching {
+            notifs.select { filter { eq("user_id", uid()); eq("read", false) } }.decodeList<Notification>().size
+        }.getOrDefault(0)
+
+    /** Live stream of my notifications (for live bell badge + list updates). */
+    suspend fun myNotifChanges(realtime: Realtime): Flow<PostgresAction> {
+        val channel = realtime.channel("my_notifications")
+        channel.subscribe()
+        return channel.postgresChangeFlow<PostgresAction>("public") { table = "notifications" }
     }
 
     suspend fun markRead(id: String) {
-        notifs.document(id).update("read", true).await()
+        runCatching { notifs.update({ set("read", true) }) { filter { eq("id", id) } } }
     }
 
     suspend fun markAllRead() {
-        val snap = notifs.whereEqualTo("user_id", uid()).whereEqualTo("read", false).get().await()
-        if (snap.isEmpty) return
-        val batch = db.batch()
-        snap.documents.forEach { batch.update(it.reference, "read", true) }
-        batch.commit().await()
+        val unread = runCatching {
+            notifs.select { filter { eq("user_id", uid()); eq("read", false) } }.decodeList<Notification>()
+        }.getOrDefault(emptyList())
+        unread.forEach { n ->
+            runCatching { notifs.update({ set("read", true) }) { filter { eq("id", n.id) } } }
+        }
     }
 }

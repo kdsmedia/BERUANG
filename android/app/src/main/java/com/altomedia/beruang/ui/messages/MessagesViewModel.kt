@@ -10,6 +10,7 @@ import com.altomedia.beruang.data.repo.FeedRepository
 import com.altomedia.beruang.data.repo.MessagesRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class MessagesViewModel @Inject constructor(
     private val repo: MessagesRepository,
     private val profiles: ProfileRepository,
-    private val feed: FeedRepository
+    private val feed: FeedRepository,
+    private val realtime: Realtime
 ) : ViewModel() {
     private val _convos = MutableStateFlow<List<ConversationSummary>>(emptyList())
     val convos: StateFlow<List<ConversationSummary>> = _convos
@@ -33,7 +35,28 @@ class MessagesViewModel @Inject constructor(
     private val _globalProfiles = MutableStateFlow<Map<String, Profile>>(emptyMap())
     val globalProfiles: StateFlow<Map<String, Profile>> = _globalProfiles
 
-    init { refresh() }
+    private var activePartner: String? = null
+
+    init {
+        refresh()
+        // Real-time global chat: append incoming global messages live.
+        viewModelScope.launch {
+            runCatching {
+                repo.globalChanges(realtime).collect { loadGlobal() }
+            }
+        }
+        // Real-time 1:1 threads: refresh the open thread + conversation list live.
+        viewModelScope.launch {
+            runCatching {
+                repo.threadChanges(realtime).collect {
+                    refresh()
+                    activePartner?.let { p ->
+                        _thread.value = repo.threadWith(p)
+                    }
+                }
+            }
+        }
+    }
 
     fun refresh() = viewModelScope.launch {
         _loading.value = true
@@ -64,6 +87,7 @@ class MessagesViewModel @Inject constructor(
     val partner: StateFlow<Profile?> = _partner
 
     fun openThread(partnerUid: String) = viewModelScope.launch {
+        activePartner = partnerUid
         try {
             _partner.value = profiles.get(partnerUid)
             _thread.value = repo.threadWith(partnerUid)

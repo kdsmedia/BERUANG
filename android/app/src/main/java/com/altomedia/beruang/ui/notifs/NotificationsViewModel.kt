@@ -7,6 +7,7 @@ import com.altomedia.beruang.data.model.Profile
 import com.altomedia.beruang.data.repo.NotificationsRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,12 +22,19 @@ data class NotifsUiState(
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
     private val repo: NotificationsRepository,
-    private val profiles: ProfileRepository
+    private val profiles: ProfileRepository,
+    private val realtime: Realtime
 ) : ViewModel() {
     private val _state = MutableStateFlow(NotifsUiState())
     val state: StateFlow<NotifsUiState> = _state
 
-    init { refresh() }
+    init {
+        refresh()
+        // Real-time: live notifications (new like/comment/friend/message).
+        viewModelScope.launch {
+            runCatching { repo.myNotifChanges(realtime).collect { refresh() } }
+        }
+    }
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true)

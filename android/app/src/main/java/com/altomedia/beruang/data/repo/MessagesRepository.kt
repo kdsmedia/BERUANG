@@ -1,32 +1,41 @@
 package com.altomedia.beruang.data.repo
 
+import com.altomedia.beruang.data.isoNow
 import com.altomedia.beruang.data.model.GlobalMessage
 import com.altomedia.beruang.data.model.Message
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class MessagesRepository @Inject constructor(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val client: SupabaseClient
 ) {
-    private val messages = db.collection("messages")
-    private val global = db.collection("global_messages")
-    private fun uid() = auth.currentUser?.uid ?: throw IllegalStateException("Not signed in")
+    private val auth: Auth get() = client.auth
+    private val postgrest: Postgrest get() = client.postgrest
+    private val messages get() = postgrest.from("messages")
+    private val global get() = postgrest.from("global_messages")
+    private fun uid() = auth.currentUserOrNull()?.id ?: throw IllegalStateException("Not signed in")
 
     // ---- 1:1 ----
     suspend fun conversationList(): List<ConversationSummary> {
-        // Avoid orderBy on created_at combined with an equality filter — that
-        // needs a composite index. Fetch plain and sort in memory.
-        val sent = messages.whereEqualTo("sender_id", uid()).limit(200).get().await()
-        val recv = messages.whereEqualTo("receiver_id", uid()).limit(200).get().await()
-        val all = (sent.documents + recv.documents)
-            .mapNotNull { it.toObject(Message::class.java)?.copy(id = it.id) }
-            .sortedByDescending { it.created_at?.seconds ?: 0 }
+        val sent = runCatching {
+            messages.select { filter { eq("sender_id", uid()) }; order("created_at", Order.DESCENDING) }.decodeList<Message>()
+        }.getOrDefault(emptyList())
+        val recv = runCatching {
+            messages.select { filter { eq("receiver_id", uid()) }; order("created_at", Order.DESCENDING) }.decodeList<Message>()
+        }.getOrDefault(emptyList())
+        val all = (sent + recv).sortedByDescending { it.created_at ?: "" }
         val byPartner = LinkedHashMap<String, Message>()
         val unread = HashMap<String, Int>()
         for (m in all) {
@@ -34,56 +43,53 @@ class MessagesRepository @Inject constructor(
             byPartner.getOrPut(partner) { m }
             if (m.receiver_id == uid() && !m.read) unread[partner] = (unread[partner] ?: 0) + 1
         }
-        return byPartner.map { (pid, m) ->
-            ConversationSummary(pid, m, unread[pid] ?: 0)
-        }
+        return byPartner.map { (pid, m) -> ConversationSummary(pid, m, unread[pid] ?: 0) }
     }
 
     suspend fun threadWith(partner: String): List<Message> {
-        // Two equality filters + orderBy would need a composite index; fetch
-        // both halves plain and merge/sort in memory.
-        val sent = messages.whereEqualTo("sender_id", uid()).whereEqualTo("receiver_id", partner).limit(200).get().await()
-        val recv = messages.whereEqualTo("sender_id", partner).whereEqualTo("receiver_id", uid()).limit(200).get().await()
-        val all = (sent.documents + recv.documents)
-            .mapNotNull { it.toObject(Message::class.java)?.copy(id = it.id) }
-            .sortedBy { it.created_at?.seconds ?: 0 }
+        val sent = runCatching {
+            messages.select { filter { eq("sender_id", uid()); eq("receiver_id", partner) }; order("created_at", Order.ASCENDING) }.decodeList<Message>()
+        }.getOrDefault(emptyList())
+        val recv = runCatching {
+            messages.select { filter { eq("sender_id", partner); eq("receiver_id", uid()) }; order("created_at", Order.ASCENDING) }.decodeList<Message>()
+        }.getOrDefault(emptyList())
+        val all = (sent + recv).sortedBy { it.created_at ?: "" }
         // mark received as read
         val unread = all.filter { it.receiver_id == uid() && !it.read }
-        if (unread.isNotEmpty()) {
-            val batch = db.batch()
-            unread.forEach { batch.update(messages.document(it.id), "read", true) }
-            batch.commit().await()
+        unread.forEach { m ->
+            runCatching { messages.update({ set("read", true) }) { filter { eq("id", m.id) } } }
         }
         return all
     }
 
+    /** Live stream of messages where I'm sender or receiver, for live chat. */
+    suspend fun threadChanges(realtime: Realtime): Flow<PostgresAction> {
+        val channel = realtime.channel("thread_messages")
+        channel.subscribe()
+        return channel.postgresChangeFlow<PostgresAction>("public") { table = "messages" }
+    }
+
     suspend fun send(to: String, text: String, feedRepo: FeedRepository) {
-        // Set created_at on the client so the message is present in cache and
-        // sorts correctly without relying on @ServerTimestamp resolving.
-        val m = Message(
-            sender_id = uid(), receiver_id = to, content = text,
-            created_at = com.google.firebase.Timestamp.now()
-        )
-        messages.add(m).await()
+        val m = Message(sender_id = uid(), receiver_id = to, content = text, created_at = isoNow())
+        messages.insert(m)
         feedRepo.createNotif(to, "message", null, "sent you a message")
     }
 
     // ---- global ----
-    suspend fun globalMessages(): List<GlobalMessage> {
-        val snap = try {
-            global.orderBy("created_at", Query.Direction.ASCENDING).limit(200).get().await()
-        } catch (e: Exception) {
-            global.limit(200).get().await()
-        }
-        return snap.documents.mapNotNull { it.toObject(GlobalMessage::class.java)?.copy(id = it.id) }
-            .sortedBy { it.created_at?.seconds ?: 0 }
+    suspend fun globalMessages(): List<GlobalMessage> =
+        runCatching {
+            global.select { order("created_at", Order.ASCENDING) }.decodeList<GlobalMessage>()
+        }.getOrDefault(emptyList())
+
+    /** Live stream of global chat messages. */
+    suspend fun globalChanges(realtime: Realtime): Flow<PostgresAction> {
+        val channel = realtime.channel("global_messages")
+        channel.subscribe()
+        return channel.postgresChangeFlow<PostgresAction>("public") { table = "global_messages" }
     }
 
     suspend fun sendGlobal(text: String) {
-        global.add(GlobalMessage(
-            user_id = uid(), content = text,
-            created_at = com.google.firebase.Timestamp.now()
-        )).await()
+        global.insert(GlobalMessage(user_id = uid(), content = text, created_at = isoNow()))
     }
 }
 

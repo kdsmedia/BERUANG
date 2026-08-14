@@ -9,6 +9,7 @@ import com.altomedia.beruang.data.repo.FriendState
 import com.altomedia.beruang.data.repo.FriendsRepository
 import com.altomedia.beruang.data.repo.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,12 +28,19 @@ data class FriendsUiState(
 class FriendsViewModel @Inject constructor(
     private val friends: FriendsRepository,
     private val profiles: ProfileRepository,
-    private val feed: FeedRepository
+    private val feed: FeedRepository,
+    private val realtime: Realtime
 ) : ViewModel() {
     private val _state = MutableStateFlow(FriendsUiState())
     val state: StateFlow<FriendsUiState> = _state
 
-    init { refresh() }
+    init {
+        refresh()
+        // Real-time: live friend requests/accepts so the Friends tab updates immediately.
+        viewModelScope.launch {
+            runCatching { friends.friendshipChanges(realtime).collect { refresh() } }
+        }
+    }
 
     fun refresh() = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true)
